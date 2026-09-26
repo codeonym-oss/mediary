@@ -50,8 +50,8 @@ async def resolve(resolver: Resolver, cls: Any) -> Any:
 
 
 def require_async(source: Any, fn: Any, needs: str, error: ErrorFactory) -> Callable[..., Any]:
-    """Return `fn` if it is an async function, else raise `error(source, ...)`."""
-    if not inspect.iscoroutinefunction(fn):
+    """Return `fn` if it is an async function or generator, else raise `error(source, ...)`."""
+    if not (inspect.iscoroutinefunction(fn) or inspect.isasyncgenfunction(fn)):
         raise error(source, f"it needs {needs}")
     return fn
 

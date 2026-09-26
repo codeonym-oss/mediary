@@ -1,7 +1,7 @@
 """Handlers: their shape, the `@handler` decorator, and binding one to its request."""
 
 import inspect
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any, Protocol, TypeVar, get_args, overload
 
@@ -31,9 +31,26 @@ class Handler(Protocol[_Req_contra, _Res_co]):
         ...
 
 
-_Handles = TypeVar("_Handles", bound=Handler[Any, Any])
-_Fn = TypeVar("_Fn", bound=Callable[..., Awaitable[Any]])
-_Any = TypeVar("_Any", bound=type[Handler[Any, Any]] | Callable[..., Awaitable[Any]])
+class StreamHandler(Protocol[_Req_contra, _Res_co]):
+    """The shape of a class handler for a stream request: `handle` is an async generator.
+
+    Example:
+        class ExportOrdersHandler:
+            async def handle(self, request: ExportOrders) -> AsyncIterator[Order]:
+                async for order in self.repo.since(request.since):
+                    yield order
+
+    """
+
+    def handle(self, request: _Req_contra, /) -> AsyncIterator[_Res_co]:
+        """Yield the items of `request`."""
+        ...
+
+
+_HandlerFn = Callable[..., Awaitable[Any]] | Callable[..., AsyncIterator[Any]]
+_Handles = TypeVar("_Handles", bound=Handler[Any, Any] | StreamHandler[Any, Any])
+_Fn = TypeVar("_Fn", bound=_HandlerFn)
+_Any = TypeVar("_Any", bound=type[Handler[Any, Any]] | type[StreamHandler[Any, Any]] | _HandlerFn)
 
 
 # A handler class is also a `type`, so the overloads overlap by design: bare use (a class with
@@ -55,7 +72,8 @@ def handler(target: Any = None, /, *, lifetime: Lifetime = "transient") -> Any:
 
     A class handler is resolved through the mediator's `Resolver` for every send, or only once
     with `lifetime="singleton"`. A function handler's parameters after the request are resolved
-    through the `Resolver` by their type hints on every send.
+    through the `Resolver` by their type hints on every send. The handler of a stream request is
+    an async generator (a function, or a class's `handle`) that yields its items.
 
     Example:
         @handler
@@ -67,6 +85,10 @@ def handler(target: Any = None, /, *, lifetime: Lifetime = "transient") -> Any:
 
         @handler
         async def delete_user(request: DeleteUser, repo: UserRepository) -> None: ...
+
+        @handler
+        async def export_orders(request: ExportOrders) -> AsyncIterator[Order]:
+            yield ...
 
     Raises:
         ValueError: `lifetime` is not "transient" or "singleton".
@@ -90,13 +112,15 @@ Invoke = Callable[[Any, Resolver], Awaitable[Any]]
 class Binding:
     """A handler bound to its request type, with how to call it for a request.
 
-    `returns` is the handler's resolved return hint, or `inspect.Signature.empty`.
+    `returns` is the handler's resolved return hint, or `inspect.Signature.empty`. A handler
+    that `streams` is an async generator: `invoke` returns its (unstarted) iterator.
     """
 
     request_type: type
     source: Any
     invoke: Invoke
     returns: Any = inspect.Signature.empty
+    streams: bool = False
 
 
 def bind(source: Any, request_type: type | None = None) -> Binding:
@@ -126,7 +150,8 @@ def bind(source: Any, request_type: type | None = None) -> Binding:
         params = shape(
             source, handle, leading=("request",), method=True, error=InvalidHandlerSignature
         )
-        invoke = _class_invoker(source, lifetime)
+        streams = inspect.isasyncgenfunction(handle)
+        invoke = _class_invoker(source, lifetime, streams)
     else:
         function = require_async(
             source, source, "to be an `async def` function or a class", InvalidHandlerSignature
@@ -136,12 +161,12 @@ def bind(source: Any, request_type: type | None = None) -> Binding:
         params = shape(
             source, function, leading=("request",), method=False, error=InvalidHandlerSignature
         )
-        invoke = _function_invoker(function, params)
+        streams = inspect.isasyncgenfunction(function)
+        invoke = _function_invoker(function, params, streams)
     if request_type is None:
         request_type = _request_hint(source, params)
-    return Binding(
-        request_type, source, invoke, params.hints.get("return", inspect.Signature.empty)
-    )
+    returns = params.hints.get("return", inspect.Signature.empty)
+    return Binding(request_type, source, invoke, returns, streams)
 
 
 def _request_hint(source: Any, params: Shape) -> type:
@@ -160,29 +185,33 @@ def _request_hint(source: Any, params: Shape) -> type:
     return hint
 
 
-def _class_invoker(cls: type, lifetime: Lifetime) -> Invoke:
+def _class_invoker(cls: type, lifetime: Lifetime, streams: bool) -> Invoke:
     if lifetime == "transient":
 
-        async def invoke(request: Any, resolver: Resolver) -> Any:
-            return await (await resolve(resolver, cls)).handle(request)
+        async def instance(resolver: Resolver) -> Any:
+            return await resolve(resolver, cls)
 
-        return invoke
+    else:
+        instances: list[Any] = []
 
-    instances: list[Any] = []
+        async def instance(resolver: Resolver) -> Any:
+            if not instances:
+                resolved = await resolve(resolver, cls)
+                if not instances:  # another send may have resolved it while this one awaited
+                    instances.append(resolved)
+            return instances[0]
 
-    async def invoke_singleton(request: Any, resolver: Resolver) -> Any:
-        if not instances:
-            instance = await resolve(resolver, cls)
-            if not instances:  # another send may have resolved it while this one awaited
-                instances.append(instance)
-        return await instances[0].handle(request)
+    async def invoke(request: Any, resolver: Resolver) -> Any:
+        items = (await instance(resolver)).handle(request)
+        return items if streams else await items
 
-    return invoke_singleton
+    return invoke
 
 
-def _function_invoker(fn: Callable[..., Awaitable[Any]], params: Shape) -> Invoke:
+def _function_invoker(fn: Callable[..., Any], params: Shape, streams: bool) -> Invoke:
     async def invoke(request: Any, resolver: Resolver) -> Any:
         args, kwargs = await params.dependencies(resolver)
-        return await fn(request, *args, **kwargs)
+        items = fn(request, *args, **kwargs)
+        return items if streams else await items
 
     return invoke

@@ -1,4 +1,4 @@
-"""Markers the decorators attach, the kinds of message, and the `Returns` typing marker."""
+"""Markers the decorators attach, the kinds of message, and the `Returns`/`Yields` markers."""
 
 import inspect
 from collections.abc import Callable, Iterable
@@ -10,7 +10,7 @@ _C = TypeVar("_C", bound=type)
 _T = TypeVar("_T")
 
 Lifetime = Literal["transient", "singleton"]
-Dispatch = Literal["send", "publish"]
+Dispatch = Literal["send", "publish", "stream"]
 
 _MARKER_ATTR: Final = "__mediary_marker__"
 
@@ -28,6 +28,27 @@ class Returns(Generic[_R_co]):
             user_id: int
 
         user = await mediator.send(GetUser(1))  # typed as User
+
+    """
+
+    __slots__ = ()
+
+
+class Yields(Generic[_R_co]):
+    """Declare what a stream request's handler yields, so `Mediator.stream` is typed.
+
+    Like `Returns`, it only informs type checkers. Stream requests that don't inherit it still
+    work, and `stream` yields `Any` for them.
+
+    Example:
+        @stream_request
+        @dataclass
+        class ExportOrders(Yields[Order]):
+            since: date
+
+        async with mediator.stream(ExportOrders(today)) as orders:
+            async for order in orders:  # typed as Order
+                ...
 
     """
 
@@ -112,8 +133,10 @@ def define_kind(name: str, *, dispatch: Dispatch, rules: Iterable[HandlerRule] =
 
     Messages of a `dispatch="send"` kind have exactly one handler and go through
     `Mediator.send`; those of a `dispatch="publish"` kind have any number and go through
-    `Mediator.publish`. Every handler registered or scanned for a message of the kind must
-    pass each of `rules`. Behaviors target the kind by name, with `kinds={name}`.
+    `Mediator.publish`; those of a `dispatch="stream"` kind have exactly one async generator
+    handler and go through `Mediator.stream`. Every handler registered or scanned for a
+    message of the kind must pass each of `rules`. Behaviors target the kind by name, with
+    `kinds={name}`.
 
     Kinds are global, like the classes they decorate, so define each one once, at import time.
 
@@ -135,7 +158,7 @@ def define_kind(name: str, *, dispatch: Dispatch, rules: Iterable[HandlerRule] =
     if name in _KINDS or name in _RESERVED:
         raise ValueError(f"a kind named {name!r} is already defined")
     if dispatch not in get_args(Dispatch):
-        raise ValueError(f'dispatch must be "send" or "publish", not {dispatch!r}')
+        raise ValueError(f'dispatch must be "send", "publish" or "stream", not {dispatch!r}')
     kind = _KINDS[name] = Kind(name, dispatch, tuple(rules))
     return kind
 
@@ -148,6 +171,7 @@ def kind_of(cls: type) -> Kind | None:
 
 _REQUEST = define_kind("request", dispatch="send")
 _NOTIFICATION = define_kind("notification", dispatch="publish")
+_STREAM_REQUEST = define_kind("stream_request", dispatch="stream")
 
 
 def request(cls: _C) -> _C:
@@ -166,6 +190,15 @@ def notification(cls: _C) -> _C:
     not notifications unless they are decorated too.
     """
     return _NOTIFICATION(cls)
+
+
+def stream_request(cls: _C) -> _C:
+    """Mark a class as a request that `Mediator.stream` dispatches to one async generator handler.
+
+    Its handler yields any number of items, which the caller consumes with `async for` as they
+    are produced. Subclasses are not stream requests unless they are decorated too.
+    """
+    return _STREAM_REQUEST(cls)
 
 
 def is_notification(cls: type) -> bool:

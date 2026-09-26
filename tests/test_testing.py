@@ -1,11 +1,23 @@
 import enum
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from importlib.metadata import entry_points
 from typing import Any
 
 import pytest
 
-from mediary import HandlerNotFound, Mediator, Next, Returns, handler, notification, request
+from mediary import (
+    HandlerNotFound,
+    Mediator,
+    Next,
+    NextStream,
+    Returns,
+    Yields,
+    handler,
+    notification,
+    request,
+    stream_request,
+)
 from mediary.testing import RecordingMediator
 
 # The example from the `mediary.testing` docs.
@@ -77,7 +89,7 @@ def project(pytester: pytest.Pytester) -> pytest.Pytester:
 
 def test_each_test_gets_a_new_empty_mediator(mediator: RecordingMediator) -> None:
     assert isinstance(mediator, Mediator)
-    assert (mediator.sent, mediator.published) == ([], [])
+    assert (mediator.sent, mediator.published, mediator.streamed) == ([], [], [])
 
 
 def test_a_fixture_of_your_own_takes_precedence(project: pytest.Pytester) -> None:
@@ -178,3 +190,51 @@ async def test_recording_mediators_are_isolated() -> None:
     first.register(GetPlan, get_plan)
     with pytest.raises(HandlerNotFound):
         await RecordingMediator().send(GetPlan("a"))
+
+
+# Streams.
+
+
+@stream_request
+@dataclass(frozen=True)
+class ListUsers(Yields[str]):
+    plan: Plan
+
+
+async def list_users(request: ListUsers) -> AsyncIterator[str]:
+    yield "from the handler"
+
+
+async def test_streams_are_recorded_and_can_be_stubbed(mediator: RecordingMediator) -> None:
+    mediator.register(ListUsers, list_users)
+    mediator.stub(ListUsers, ["ada", "grace"])
+
+    assert [user async for user in mediator.stream(ListUsers(Plan.PRO))] == ["ada", "grace"]
+    assert [user async for user in mediator.stream(ListUsers(Plan.FREE))] == ["ada", "grace"]
+    assert mediator.streamed_of(ListUsers) == [ListUsers(Plan.PRO), ListUsers(Plan.FREE)]
+    assert mediator.streamed_of(GetPlan) == []
+
+
+async def test_unstubbed_streams_reach_their_handler(mediator: RecordingMediator) -> None:
+    mediator.register(ListUsers, list_users)
+    assert [user async for user in mediator.stream(ListUsers(Plan.PRO))] == ["from the handler"]
+    with pytest.raises(HandlerNotFound):
+        mediator.stream(Welcomed("x"))
+    assert mediator.streamed == [ListUsers(Plan.PRO), Welcomed("x")]
+
+
+async def test_a_stubbed_stream_can_fail_and_is_wrapped_by_behaviors(
+    mediator: RecordingMediator,
+) -> None:
+    async def upper(request: ListUsers, next: NextStream[str]) -> AsyncIterator[str]:
+        async for user in next():
+            yield user.upper()
+
+    mediator.use(upper)
+    mediator.stub(ListUsers, ["ada"])
+    assert [user async for user in mediator.stream(ListUsers(Plan.PRO))] == ["ADA"]
+
+    mediator.stub(ListUsers, raises=ConnectionError("down"))
+    stream = mediator.stream(ListUsers(Plan.PRO))
+    with pytest.raises(ConnectionError, match="down"):
+        await anext(stream)

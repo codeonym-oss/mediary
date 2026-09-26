@@ -4,12 +4,12 @@ import inspect
 import sys
 import types
 import typing
-from collections.abc import Awaitable, Callable, Iterable
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterable
 from dataclasses import dataclass
 from typing import Any, Protocol, TypeAlias, TypeVar, Union, overload
 
 from ._errors import InvalidBehaviorSignature
-from ._markers import Marker, mark, marker_of
+from ._markers import Marker, kind_of, mark, marker_of
 from ._resolving import Resolver, Shape, require_async, resolve, shape
 
 _R = TypeVar("_R")
@@ -17,6 +17,9 @@ _Req_contra = TypeVar("_Req_contra", contravariant=True)
 
 Next: TypeAlias = Callable[[], Awaitable[_R]]
 """Calls the rest of the pipeline (the next behavior, or the handler) and returns its result."""
+
+NextStream: TypeAlias = Callable[[], AsyncIterator[_R]]
+"""Opens the rest of a stream's pipeline (the next behavior, or the handler) as an iterator."""
 
 
 class Behavior(Protocol[_Req_contra, _R]):
@@ -41,9 +44,35 @@ class Behavior(Protocol[_Req_contra, _R]):
         ...
 
 
-_Behaves = TypeVar("_Behaves", bound=Behavior[Any, Any])
-_Fn = TypeVar("_Fn", bound=Callable[..., Awaitable[Any]])
-_Any = TypeVar("_Any", bound=type[Behavior[Any, Any]] | Callable[..., Awaitable[Any]])
+class StreamBehavior(Protocol[_Req_contra, _R]):
+    """The shape of a class behavior around stream requests: `handle` is an async generator.
+
+    It yields the items of the rest of the pipeline, which it opens by calling `next()`. It
+    may filter, transform, add or count items, and run code before and after the stream.
+    Iterators it gets from `next()` are closed when it is, even if it doesn't close them.
+
+    Example:
+        class Counting:
+            async def handle(self, request: object, next: NextStream[T]) -> AsyncIterator[T]:
+                count = 0
+                async for item in next():
+                    count += 1
+                    yield item
+                log(type(request), count)
+
+    """
+
+    def handle(self, request: _Req_contra, next: NextStream[_R], /) -> AsyncIterator[_R]:
+        """Yield the items of `request`, usually those of `next()`."""
+        ...
+
+
+_BehaviorFn = Callable[..., Awaitable[Any]] | Callable[..., AsyncIterator[Any]]
+_Behaves = TypeVar("_Behaves", bound=Behavior[Any, Any] | StreamBehavior[Any, Any])
+_Fn = TypeVar("_Fn", bound=_BehaviorFn)
+_Any = TypeVar(
+    "_Any", bound=type[Behavior[Any, Any]] | type[StreamBehavior[Any, Any]] | _BehaviorFn
+)
 
 
 @overload
@@ -59,6 +88,10 @@ def behavior(target: Any = None, /, *, order: int = 0, kinds: Iterable[str] | No
     hint is missing, `object` or `Any`; subclasses of a class; classes that have every member
     of a Protocol; or any member of a union. `kinds` further limits it to requests whose
     decorator has one of those kinds, such as `{"request"}`.
+
+    A behavior whose `handle` (or the function itself) is an async generator is a stream
+    behavior: it wraps only stream requests, and gets `next` as a `NextStream`. Every other
+    behavior wraps only the requests and notifications that are sent or published.
 
     Behaviors with a lower `order` run outside those with a higher one; ties are ordered by
     fully qualified name. A class behavior is resolved through the `Resolver` for every send.
@@ -92,12 +125,16 @@ def _kinds(kinds: Iterable[str] | None) -> frozenset[str] | None:
     return None if kinds is None else frozenset(kinds)
 
 
-InvokeBehavior = Callable[[Any, Next[Any], Resolver], Awaitable[Any]]
+InvokeBehavior = Callable[[Any, Any, Resolver], Awaitable[Any]]
+"""Calls a behavior with `(request, next, resolver)`; a stream behavior's returns an iterator."""
 
 
 @dataclass(frozen=True, slots=True)
 class BehaviorBinding:
-    """A behavior with its pipeline position, what it wraps, and how to call it."""
+    """A behavior with its pipeline position, what it wraps, and how to call it.
+
+    A behavior that `streams` is an async generator: `invoke` returns its (unstarted) iterator.
+    """
 
     source: Any
     order: int
@@ -105,9 +142,13 @@ class BehaviorBinding:
     targets: tuple[type, ...] | None
     kinds: frozenset[str] | None
     invoke: InvokeBehavior
+    streams: bool = False
 
     def wraps(self, request_type: type) -> bool:
         """Whether this behavior belongs in the pipeline of `request_type`."""
+        kind = kind_of(request_type)
+        if self.streams != (kind is not None and kind.dispatch == "stream"):
+            return False
         if self.kinds is not None:
             marker = marker_of(request_type)
             if marker is None or marker.kind not in self.kinds:
@@ -139,7 +180,10 @@ def bind_behavior(
             InvalidBehaviorSignature,
         )
         params = shape(source, handle, leading=leading, method=True, error=InvalidBehaviorSignature)
-        invoke = _class_invoker(source) if source is cls else _instance_invoker(source)
+        streams = inspect.isasyncgenfunction(handle)
+        invoke = (
+            _class_invoker(source, streams) if source is cls else _instance_invoker(source, streams)
+        )
     else:
         cls = source
         function = require_async(
@@ -148,7 +192,8 @@ def bind_behavior(
         params = shape(
             source, function, leading=leading, method=False, error=InvalidBehaviorSignature
         )
-        invoke = _function_invoker(function, params)
+        streams = inspect.isasyncgenfunction(function)
+        invoke = _function_invoker(function, params, streams)
     return BehaviorBinding(
         source=source,
         order=order if order is not None else marker.order if marker is not None else 0,
@@ -156,6 +201,7 @@ def bind_behavior(
         targets=_targets(source, params),
         kinds=_kinds(kinds) if kinds is not None else marker.kinds if marker else None,
         invoke=invoke,
+        streams=streams,
     )
 
 
@@ -211,23 +257,26 @@ def _annotation_names(cls: type) -> Iterable[str]:
     return inspect.get_annotations(cls)
 
 
-def _class_invoker(cls: type) -> InvokeBehavior:
-    async def invoke(request: Any, next: Next[Any], resolver: Resolver) -> Any:
-        return await (await resolve(resolver, cls)).handle(request, next)
+def _class_invoker(cls: type, streams: bool) -> InvokeBehavior:
+    async def invoke(request: Any, next: Any, resolver: Resolver) -> Any:
+        result = (await resolve(resolver, cls)).handle(request, next)
+        return result if streams else await result
 
     return invoke
 
 
-def _instance_invoker(instance: Any) -> InvokeBehavior:
-    async def invoke(request: Any, next: Next[Any], resolver: Resolver) -> Any:
-        return await instance.handle(request, next)
+def _instance_invoker(instance: Any, streams: bool) -> InvokeBehavior:
+    async def invoke(request: Any, next: Any, resolver: Resolver) -> Any:
+        result = instance.handle(request, next)
+        return result if streams else await result
 
     return invoke
 
 
-def _function_invoker(fn: Callable[..., Awaitable[Any]], params: Shape) -> InvokeBehavior:
-    async def invoke(request: Any, next: Next[Any], resolver: Resolver) -> Any:
+def _function_invoker(fn: Callable[..., Any], params: Shape, streams: bool) -> InvokeBehavior:
+    async def invoke(request: Any, next: Any, resolver: Resolver) -> Any:
         args, kwargs = await params.dependencies(resolver)
-        return await fn(request, next, *args, **kwargs)
+        result = fn(request, next, *args, **kwargs)
+        return result if streams else await result
 
     return invoke

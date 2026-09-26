@@ -5,13 +5,27 @@ Type-level tests: pyright (strict) checks this file in CI.
 `pyright: ignore[...]` asserts an error IS reported (unused ignores are errors).
 """
 
+from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass
 from typing import Any, TypeVar, assert_type
 
 import pytest
 
-from mediary import Mediator, Next, Returns, behavior, handler, request, retryable
+from mediary import (
+    Mediator,
+    Next,
+    NextStream,
+    Returns,
+    Stream,
+    Yields,
+    behavior,
+    handler,
+    request,
+    retryable,
+    stream_request,
+)
 from mediary.cqrs import Command, CommandSender, Query, QuerySender, command, query
+from mediary.testing import RecordingMediator
 
 T = TypeVar("T")
 
@@ -137,3 +151,44 @@ def test_retryable_keeps_the_exception_type() -> None:
     assert_type(retryable(Flaky), type[Flaky])
     with pytest.raises(TypeError):
         retryable(int)  # pyright: ignore[reportArgumentType]
+
+
+@stream_request
+@dataclass
+class ListNames(Yields[str]):
+    pass
+
+
+async def list_names(request: ListNames) -> AsyncIterator[str]:
+    yield "ada"
+
+
+class ListNamesHandler:
+    async def handle(self, request: ListNames) -> AsyncIterator[str]:
+        yield "ada"
+
+
+async def upper(request: object, next: NextStream[str]) -> AsyncIterator[str]:
+    async for name in next():
+        yield name.upper()
+
+
+class Upper:
+    async def handle(self, request: object, next: NextStream[str]) -> AsyncIterator[str]:
+        async for name in next():
+            yield name.upper()
+
+
+async def test_stream_is_typed_from_yields() -> None:
+    m = RecordingMediator()
+    m.register(ListNames, list_names)
+    Mediator().register(ListNames, ListNamesHandler)
+    m.use(behavior(upper))
+    assert_type(behavior(Upper), type[Upper])
+    decorated: Callable[[ListNames], AsyncIterator[str]] = handler(list_names)
+    assert decorated is list_names
+    assert_type(m.stream(ListNames()), Stream[str])
+    async with m.stream(ListNames()) as names:
+        async for name in names:
+            assert_type(name, str)
+    m.stub(ListNames, ["grace"])
