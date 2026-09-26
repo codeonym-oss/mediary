@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.0](https://github.com/codeonym-oss/mediary/compare/v0.1.0...v0.2.0) (2026-09-26)
+
+
+### Features
+
+* add dishka and FastAPI integrations ([#14](https://github.com/codeonym-oss/mediary/issues/14)) ([45a9053](https://github.com/codeonym-oss/mediary/commit/45a9053ff1bec708a9ab0cec0a693a3b03531b4d))
+* add stream requests ([#13](https://github.com/codeonym-oss/mediary/issues/13)) ([b6d4e45](https://github.com/codeonym-oss/mediary/commit/b6d4e458ba8dda48cd2faac0fd809e9be885d50c))
+* run on trio through AnyIO with mediary[anyio] ([#16](https://github.com/codeonym-oss/mediary/issues/16)) ([6184c1c](https://github.com/codeonym-oss/mediary/commit/6184c1ccb8de40f6b25c9cca544bf2b62d91c66e))
+
+
+### Documentation
+
+* add documentation site ([#15](https://github.com/codeonym-oss/mediary/issues/15)) ([3bc6b23](https://github.com/codeonym-oss/mediary/commit/3bc6b23f8fb131d905ba42edab458c2a8dd1fe99))
+
 ## 0.1.0 (2026-09-26)
 
 
