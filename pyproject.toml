@@ -1,6 +1,6 @@
 [project]
 name = "mediary"
-version = "0.2.0"
+version = "0.2.1"
 description = "Typed, decorator-driven mediator + CQRS for Python — handlers, pipelines and notifications discovered by package scan."
 readme = "README.md"
 license = "MIT"
