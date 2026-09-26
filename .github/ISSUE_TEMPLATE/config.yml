@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/codeonym-oss/mediary/security/advisories/new
+    about: Report security issues privately, not as a public issue.
+  - name: Roadmap
+    url: https://github.com/orgs/codeonym-oss/projects/2
+    about: See what's planned and in progress.

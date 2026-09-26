@@ -27,3 +27,11 @@ jobs:
             chore
             revert
           requireScope: false
+          # Squash merge turns the title into main's commit and changelog entry, so it carries the issue key.
+          subjectPattern: ^.+ \(#[1-9]\d*\)$
+          subjectPatternError: |
+            The PR title must end with the issue key, e.g. "feat: discover handlers by package scan (#5)".
+          # Bot PRs (release-please, Dependabot) have no issue.
+          ignoreLabels: |
+            autorelease: pending
+            dependencies
