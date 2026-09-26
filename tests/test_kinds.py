@@ -29,11 +29,11 @@ def no_floats(info: HandlerInfo) -> str | None:
     return "it must not return a float" if info.returns is float else None
 
 
-report = define_kind("report", dispatch="send", rules=[no_strings, no_floats])
+tally = define_kind("tally", dispatch="send", rules=[no_strings, no_floats])
 alert = define_kind("alert", dispatch="publish")
 
 
-@report
+@tally
 @dataclass(frozen=True)
 class Totals(Returns[int]):
     year: int
@@ -46,8 +46,8 @@ class DiskFull:
 
 
 def test_a_kind_decorates_a_class_as_itself() -> None:
-    assert kind_of(Totals) is report
-    assert (report.name, report.dispatch) == ("report", "send")
+    assert kind_of(Totals) is tally
+    assert (tally.name, tally.dispatch) == ("tally", "send")
     assert kind_of(DiskFull) is alert
     assert kind_of(int) is None
 
@@ -64,7 +64,7 @@ def test_a_kind_is_not_inherited() -> None:
         Mediator().register(Monthly, monthly)
 
 
-@pytest.mark.parametrize("name", ["report", "request", "notification", "handler", "behavior"])
+@pytest.mark.parametrize("name", ["tally", "request", "notification", "handler", "behavior"])
 def test_kind_names_are_unique(name: str) -> None:
     with pytest.raises(ValueError, match=f"a kind named '{name}' is already defined"):
         define_kind(name, dispatch="send")
@@ -129,7 +129,7 @@ def test_a_handler_breaking_a_rule_is_rejected() -> None:
     async def as_float(request: Totals) -> float:
         return 0.0
 
-    with pytest.raises(RuleViolation, match="breaks a rule of @report: it must not return a str"):
+    with pytest.raises(RuleViolation, match="breaks a rule of @tally: it must not return a str"):
         Mediator().register(Totals, as_text)
     with pytest.raises(RuleViolation, match="it must not return a float"):
         Mediator().register(Totals, as_float)
@@ -139,7 +139,7 @@ async def test_behaviors_and_logging_know_the_kind(caplog: pytest.LogCaptureFixt
     caplog.set_level(logging.INFO, logger="test.kinds")
     wrapped: list[str] = []
 
-    async def reports_only(message: object, next: Next[Any]) -> Any:
+    async def tallies_only(message: object, next: Next[Any]) -> Any:
         wrapped.append(type(message).__name__)
         return await next()
 
@@ -156,9 +156,9 @@ async def test_behaviors_and_logging_know_the_kind(caplog: pytest.LogCaptureFixt
     m = Mediator()
     m.register(Totals, totals)
     m.register(Plain, plain)
-    m.use(reports_only, kinds={"report"})
+    m.use(tallies_only, kinds={"tally"})
     m.use(LoggingBehavior(logging.getLogger("test.kinds")))
     await m.send(Totals(1))
     await m.send(Plain())
     assert wrapped == ["Totals"]
-    assert [r.__dict__["mediary_kind"] for r in caplog.records] == ["report", "request"]
+    assert [r.__dict__["mediary_kind"] for r in caplog.records] == ["tally", "request"]
