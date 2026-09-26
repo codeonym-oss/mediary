@@ -1,0 +1,85 @@
+[project]
+name = "mediary"
+version = "0.0.0"
+description = "Typed, decorator-driven mediator + CQRS for Python — handlers, pipelines and notifications discovered by package scan."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "codeonym-oss" }]
+requires-python = ">=3.11"
+dependencies = []
+keywords = ["mediator", "cqrs", "asyncio", "pipeline", "middleware", "command", "query"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: AsyncIO",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://github.com/codeonym-oss/mediary"
+Repository = "https://github.com/codeonym-oss/mediary"
+Issues = "https://github.com/codeonym-oss/mediary/issues"
+Changelog = "https://github.com/codeonym-oss/mediary/blob/main/CHANGELOG.md"
+
+[build-system]
+requires = ["uv_build>=0.8.22,<0.13"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.3",
+    "pyright[nodejs]>=1.1.400",
+    "pytest>=9",
+    "pytest-asyncio>=1.2",
+    "pytest-cov>=7",
+    "ruff>=0.16",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E", "W", "F", "I", "B", "UP", "SIM", "RUF", "C4", "PT", "PIE", "RET",
+    "TC", "ASYNC", "PERF", "N", "D",
+]
+ignore = [
+    "D100", "D104", "D105", "D107",  # module/package/magic/__init__ docstrings
+    "D203", "D213",                  # pick D211 + D212 (summary on the first line)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D"]
+
+[tool.pyright]
+include = ["src", "tests"]
+pythonVersion = "3.11"
+typeCheckingMode = "strict"
+
+[tool.pytest.ini_options]
+addopts = ["--strict-markers", "--strict-config", "-ra", "--cov", "--cov-report=term-missing"]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+xfail_strict = true
+filterwarnings = ["error"]
+
+[tool.coverage.run]
+source = ["mediary"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 95
+show_missing = true
+skip_covered = true
+exclude_also = ["if TYPE_CHECKING:", "@overload", "raise NotImplementedError", "\\.\\.\\."]
