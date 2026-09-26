@@ -8,7 +8,9 @@ Type-level tests: pyright (strict) checks this file in CI.
 from dataclasses import dataclass
 from typing import Any, TypeVar, assert_type
 
-from mediary import Mediator, Next, Returns, behavior, handler, request
+import pytest
+
+from mediary import Mediator, Next, Returns, behavior, handler, request, retryable
 from mediary.cqrs import Command, CommandSender, Query, QuerySender, command, query
 
 T = TypeVar("T")
@@ -125,3 +127,13 @@ async def test_a_mediator_is_both_senders_and_each_sends_only_its_kind() -> None
     m.register(CountUsers, count_users)
     await use_senders(m, m)
     assert_type(command(Rename), type[Rename])
+
+
+class Flaky(Exception):
+    pass
+
+
+def test_retryable_keeps_the_exception_type() -> None:
+    assert_type(retryable(Flaky), type[Flaky])
+    with pytest.raises(TypeError):
+        retryable(int)  # pyright: ignore[reportArgumentType]
