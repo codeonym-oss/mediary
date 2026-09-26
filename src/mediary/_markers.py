@@ -72,3 +72,18 @@ def is_request(cls: type) -> bool:
     """Whether `cls` itself is decorated as a request."""
     marker = marker_of(cls)
     return marker is not None and marker.kind == "request"
+
+
+def notification(cls: _C) -> _C:
+    """Mark a class as a notification that `Mediator.publish` sends to all of its handlers.
+
+    A notification has zero or more handlers, written like request handlers. Subclasses are
+    not notifications unless they are decorated too.
+    """
+    return mark(cls, Marker(kind="notification"))
+
+
+def is_notification(cls: type) -> bool:
+    """Whether `cls` itself is decorated as a notification."""
+    marker = marker_of(cls)
+    return marker is not None and marker.kind == "notification"

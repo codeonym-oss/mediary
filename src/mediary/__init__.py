@@ -9,18 +9,21 @@ from ._errors import (
     InvalidBehaviorSignature,
     InvalidHandlerSignature,
     MediaryError,
+    NotANotification,
     NotARequest,
     ScanError,
 )
 from ._handlers import Handler, handler
-from ._markers import Returns, request
+from ._markers import Returns, notification, request
 from ._mediator import Mediator
+from ._publishing import Concurrent, PublishStrategy, Sequential
 from ._resolving import Resolver
 
 __version__: str = version("mediary")
 
 __all__ = [
     "Behavior",
+    "Concurrent",
     "DuplicateHandler",
     "Handler",
     "HandlerNotFound",
@@ -29,12 +32,16 @@ __all__ = [
     "MediaryError",
     "Mediator",
     "Next",
+    "NotANotification",
     "NotARequest",
+    "PublishStrategy",
     "Resolver",
     "Returns",
     "ScanError",
+    "Sequential",
     "__version__",
     "behavior",
     "handler",
+    "notification",
     "request",
 ]
