@@ -2,10 +2,12 @@
 
 A block preceded by `<!-- file: path/to/module.py -->` is written to that path, on sys.path,
 before anything runs. The other blocks run in one shared module, with top-level `await`, and
-any `test_*` function a block defines is called with a fresh `RecordingMediator`.
+any `test_*` function a block defines is called with a fresh `RecordingMediator`. A block
+preceded by `<!-- requires: module -->` runs only when that module (an extra) is installed.
 """
 
 import ast
+import importlib.util
 import inspect
 import re
 import sys
@@ -17,7 +19,10 @@ import pytest
 from mediary.testing import RecordingMediator
 
 README = Path(__file__).parent.parent / "README.md"
-BLOCK = re.compile(r"(?:<!-- file: (?P<file>\S+) -->\n)?```python\n(?P<code>.*?)^```", re.S | re.M)
+BLOCK = re.compile(
+    r"(?:<!-- (?P<directive>file|requires): (?P<arg>\S+) -->\n)?```python\n(?P<code>.*?)^```",
+    re.S | re.M,
+)
 
 
 async def test_the_readme_examples_run(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -26,8 +31,10 @@ async def test_the_readme_examples_run(tmp_path: Path, monkeypatch: pytest.Monke
     for match in BLOCK.finditer(text):
         # Pad with blank lines so tracebacks point at README line numbers.
         code = "\n" * text.count("\n", 0, match.start("code")) + match["code"]
-        if match["file"]:
-            path = tmp_path / match["file"]
+        if match["directive"] == "requires" and importlib.util.find_spec(match["arg"]) is None:
+            continue
+        if match["directive"] == "file":
+            path = tmp_path / match["arg"]
             path.parent.mkdir(parents=True, exist_ok=True)
             (path.parent / "__init__.py").touch()
             path.write_text(match["code"])

@@ -235,3 +235,33 @@ def test_function_handler_types_are_kept() -> None:
 
     decorated: Callable[[Greet], Awaitable[str]] = handler(greet)
     assert decorated is greet
+
+
+async def test_a_view_with_another_resolver_shares_everything_else() -> None:
+    m = Mediator()
+    m.register(Greet, GreetHandler)
+    scoped = m.with_resolver(RecordingResolver("hey"))
+    assert (await m.send(Greet("ada")), await scoped.send(Greet("ada"))) == (
+        "hello ada",
+        "hey ada",
+    )
+    assert m.resolver is not scoped.resolver
+
+    @request
+    class Later(Returns[str]):
+        pass
+
+    async def later(request: Later) -> str:
+        return "later"
+
+    scoped.register(Later, later)
+    assert await m.send(Later()) == "later"
+
+
+def test_a_view_keeps_the_mediators_class() -> None:
+    from mediary.testing import RecordingMediator
+
+    recording = RecordingMediator()
+    view = recording.with_resolver(RecordingResolver())
+    assert isinstance(view, RecordingMediator)
+    assert view.sent is recording.sent

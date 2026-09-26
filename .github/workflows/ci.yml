@@ -54,13 +54,31 @@ jobs:
       - run: uv sync --frozen
       - run: uv run --frozen pytest
 
+  # The tests with no extra installed, then with each one alone: the tests of missing extras
+  # skip, and the core must not need any of them.
+  extras:
+    name: extras (${{ matrix.extra }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        extra: [none, dishka, fastapi]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+          python-version: "3.11"
+      - run: uv sync --frozen --no-default-groups --group test ${{ matrix.extra != 'none' && format('--extra {0}', matrix.extra) || '' }}
+      - run: uv run --frozen --no-sync pytest --no-cov
+
   build-check:
     uses: ./.github/workflows/build.yml
 
   # Single stable check name for the branch ruleset, independent of the matrix.
   ci-ok:
     if: always()
-    needs: [lint, typecheck, test, build-check]
+    needs: [lint, typecheck, test, extras, build-check]
     runs-on: ubuntu-latest
     steps:
       - name: All CI jobs passed

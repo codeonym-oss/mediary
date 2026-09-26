@@ -12,12 +12,14 @@ Typed, decorator-driven mediator + CQRS for Python — handlers, pipelines and n
 - **Pipelines.** Behaviors (middleware) wrap handlers, targeted by type, Protocol or kind, and ordered. Logging, retry and timeout ship ready-made.
 - **Notifications**, with sequential or concurrent publishing, and **streams** of items from async generators.
 - **CQRS pack.** `@command`, `@query`, `@event`, and senders that can only send one kind.
-- **Pluggable DI**, **testing helpers** and a **pytest fixture**. Zero dependencies, asyncio only, Python 3.11+.
+- **Pluggable DI**, with ready-made **dishka** and **FastAPI** integrations as extras.
+- **Testing helpers** and a **pytest fixture**. Zero dependencies, asyncio only, Python 3.11+.
 
 ## Install
 
 ```sh
 pip install mediary      # or: uv add mediary
+pip install mediary[full]  # with every integration (see Integrations)
 ```
 
 ## Quickstart
@@ -351,6 +353,57 @@ async def test_placing_an_order_announces_it(mediator: RecordingMediator) -> Non
 ```
 
 Stubs stand in for handlers — `mediator.stub(PlaceOrder, raises=CardDeclined())` fails instead, and `mediator.stub(ExportOrders, [2, 4])` yields those items — and behaviors still wrap them. Streams are recorded in `mediator.streamed`. Every mediator is isolated, so tests never share registrations.
+
+## Integrations
+
+Extras plug mediary into DI containers and web frameworks; `pip install mediary[full]` installs them all. Each builds on `mediator.with_resolver(resolver)`, a cheap view of a mediator that shares its handlers and behaviors but resolves through another resolver — one per web request, say.
+
+**dishka** (`mediary[dishka]`): `MediaryProvider` provides the mediator's handler classes to [dishka](https://github.com/reagento/dishka), and in each request scope a `Mediator` that resolves from it. Handlers then get request-scoped dependencies, such as one database session per request:
+
+<!-- requires: dishka -->
+```python
+from dishka import Provider, Scope, make_async_container
+
+from mediary.ext.dishka import MediaryProvider
+
+app_provider = Provider(scope=Scope.REQUEST)
+app_provider.provide(Inventory)
+
+mediator = Mediator()
+mediator.scan("shop")  # scan before making the container: it provides what's registered
+
+container = make_async_container(app_provider, MediaryProvider(mediator))
+async with container() as request_container:
+    scoped = await request_container.get(Mediator)
+    assert await scoped.send(CheckStock("book")) == 3
+await container.close()
+```
+
+With dishka's own FastAPI integration, endpoints then take `mediator: FromDishka[Mediator]`.
+
+**FastAPI** (`mediary[fastapi]`), without a container: `setup_mediary` attaches the mediator to the app, and endpoints take `MediatorDep`. Handlers can depend on the current `Request` or `WebSocket`:
+
+<!-- requires: fastapi -->
+```python
+from fastapi import FastAPI
+
+from mediary.ext.fastapi import MediatorDep, setup_mediary
+
+app = FastAPI()
+mediator = Mediator()
+mediator.scan("shop")
+setup_mediary(app, mediator)
+
+
+@app.get("/stock/{item}")
+async def stock(item: str, mediator: MediatorDep) -> int:
+    return await mediator.send(CheckStock(item))
+
+
+from fastapi.testclient import TestClient  # try it
+
+assert TestClient(app).get("/stock/book").json() == 3
+```
 
 ## Why not register by hand?
 
