@@ -30,9 +30,13 @@ class Returns(Generic[_R_co]):
 
 @dataclass(frozen=True, slots=True)
 class Marker:
-    """What a decorator recorded about a class."""
+    """What a decorator recorded about a class.
+
+    `target` is the request type an `@handler(SomeRequest)` names explicitly.
+    """
 
     kind: str
+    target: type | None = None
 
 
 def request(cls: _C) -> _C:
@@ -41,7 +45,12 @@ def request(cls: _C) -> _C:
     The class is returned unchanged apart from the marker; it can be a dataclass, a pydantic
     model or any plain class. Subclasses are not requests unless they are decorated too.
     """
-    setattr(cls, _MARKER_ATTR, Marker(kind="request"))
+    return mark(cls, Marker(kind="request"))
+
+
+def mark(cls: _C, marker: Marker) -> _C:
+    """Attach `marker` to `cls` and return `cls`."""
+    setattr(cls, _MARKER_ATTR, marker)
     return cls
 
 
@@ -49,3 +58,9 @@ def marker_of(cls: type) -> Marker | None:
     """Return the marker decorated onto `cls` itself (never an inherited one)."""
     marker = cls.__dict__.get(_MARKER_ATTR)
     return marker if isinstance(marker, Marker) else None
+
+
+def is_request(cls: type) -> bool:
+    """Whether `cls` itself is decorated as a request."""
+    marker = marker_of(cls)
+    return marker is not None and marker.kind == "request"

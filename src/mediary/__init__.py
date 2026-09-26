@@ -8,9 +8,11 @@ from ._errors import (
     InvalidHandlerSignature,
     MediaryError,
     NotARequest,
+    ScanError,
 )
+from ._handlers import Handler, handler
 from ._markers import Returns, request
-from ._mediator import Handler, Mediator
+from ._mediator import Mediator
 
 __version__: str = version("mediary")
 
@@ -23,6 +25,8 @@ __all__ = [
     "Mediator",
     "NotARequest",
     "Returns",
+    "ScanError",
     "__version__",
+    "handler",
     "request",
 ]
