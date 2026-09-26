@@ -12,12 +12,12 @@ build:
       - asdf plugin add uv
       - asdf install uv latest
       - asdf global uv latest
-    # Sphinx 9 needs 3.12+: pin the venv's Python over the repo's .python-version (3.11).
+    # Sphinx 9 needs 3.12+: UV_PYTHON overrides the repo's .python-version (3.11). The
+    # integrations' modules import their frameworks, hence the `full` extra.
     create_environment:
-      - uv venv --python 3.13 "${READTHEDOCS_VIRTUALENV_PATH}"
-    # The integrations' modules import their frameworks, hence the `full` extra.
+      - UV_PYTHON=3.13 uv venv "${READTHEDOCS_VIRTUALENV_PATH}"
     install:
-      - UV_PROJECT_ENVIRONMENT="${READTHEDOCS_VIRTUALENV_PATH}" uv sync --frozen --no-default-groups --group docs --extra full
+      - UV_PYTHON=3.13 UV_PROJECT_ENVIRONMENT="${READTHEDOCS_VIRTUALENV_PATH}" uv sync --frozen --no-default-groups --group docs --extra full
 
 sphinx:
   configuration: docs/conf.py
