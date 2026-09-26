@@ -15,6 +15,7 @@ import sys
 import types
 from pathlib import Path
 
+import anyio
 import pytest
 
 from mediary.testing import RecordingMediator
@@ -70,9 +71,10 @@ async def test_the_examples_run(
         for code in scripts:
             before = set(vars(module))
             compiled = compile(code, str(page), "exec", flags=ast.PyCF_ALLOW_TOP_LEVEL_AWAIT)
-            result = eval(compiled, vars(module))
-            if inspect.iscoroutine(result):
-                await result
+            if compiled.co_flags & inspect.CO_COROUTINE:
+                await eval(compiled, vars(module))
+            else:  # as in a script: outside the event loop, where it may start its own
+                await anyio.to_thread.run_sync(eval, compiled, vars(module))
             for name in sorted(set(vars(module)) - before):
                 if name.startswith("test_"):
                     await getattr(module, name)(RecordingMediator())

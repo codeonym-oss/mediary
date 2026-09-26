@@ -3,6 +3,7 @@
 import subprocess
 import sys
 import textwrap
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 import pytest
@@ -126,4 +127,7 @@ def test_trio_is_detected_even_inside_asyncio() -> None:
     async def on_asyncio() -> None:
         trio.run(on_trio)  # asyncio's running loop is still set on this thread
 
-    asyncio.run(on_asyncio())
+    # Off the main thread, where neither loop installs signal handling: on Windows, theirs
+    # collide.
+    with ThreadPoolExecutor(1) as thread:
+        thread.submit(asyncio.run, on_asyncio()).result()
