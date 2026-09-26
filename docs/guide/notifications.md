@@ -6,7 +6,8 @@ A **notification** announces that something happened. Unlike a request, it goes 
 
 Decorate the notification class with `@notification`, and write handlers for it as for requests:
 
-```python title="shop/events.py"
+```{code-block} python
+:caption: shop/events.py
 from dataclasses import dataclass
 
 from mediary import handler, notification

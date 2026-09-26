@@ -1,20 +1,20 @@
-"""The extension API for new kinds of message, such as the commands and queries of `mediary.cqrs`.
+"""The extension API for new kinds of message, such as the commands and queries of ``mediary.cqrs``.
 
-A kind is a class decorator, like `@request`, plus how its messages are dispatched and the
-rules their handlers must follow. Handlers, behaviors, `scan` and `LoggingBehavior` work with
-every kind, and behaviors can target one with `kinds={"<name>"}`.
+A kind is a class decorator, like ``@request``, plus how its messages are dispatched and the
+rules their handlers must follow. Handlers, behaviors, ``scan`` and ``LoggingBehavior`` work with
+every kind, and behaviors can target one with ``kinds={"<name>"}``.
 
 Example:
-    ```python
-    from mediary.kinds import HandlerInfo, define_kind
+    .. code-block:: python
 
-    def returns_a_report(info: HandlerInfo) -> str | None:
-        if info.returns is not Report:
-            return "it must be annotated to return a Report"
-        return None
+        from mediary.kinds import HandlerInfo, define_kind
 
-    report = define_kind("report", dispatch="send", rules=[returns_a_report])
-    ```
+        def returns_a_report(info: HandlerInfo) -> str | None:
+            if info.returns is not Report:
+                return "it must be annotated to return a Report"
+            return None
+
+        report = define_kind("report", dispatch="send", rules=[returns_a_report])
 
 """
 

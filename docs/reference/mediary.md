@@ -6,177 +6,152 @@ The core: the mediator, the markers for messages and handlers, behaviors, and er
 
 The mediator, and the streams it returns.
 
-::: mediary.Mediator
-    options:
-      heading_level: 3
-      show_root_full_path: false
+```{eval-rst}
+.. autoclass:: mediary.Mediator
+```
 
-::: mediary.Stream
-    options:
-      heading_level: 3
-      show_root_full_path: false
+```{eval-rst}
+.. autoclass:: mediary.Stream
+```
 
 ## Messages
 
 Decorators and bases that declare messages and what they return.
 
-::: mediary.request
-    options:
-      heading_level: 3
-      show_root_full_path: false
+```{eval-rst}
+.. autofunction:: mediary.request
+```
 
-::: mediary.notification
-    options:
-      heading_level: 3
-      show_root_full_path: false
+```{eval-rst}
+.. autofunction:: mediary.notification
+```
 
-::: mediary.stream_request
-    options:
-      heading_level: 3
-      show_root_full_path: false
+```{eval-rst}
+.. autofunction:: mediary.stream_request
+```
 
-::: mediary.Returns
-    options:
-      heading_level: 3
-      show_root_full_path: false
+```{eval-rst}
+.. autoclass:: mediary.Returns
+```
 
-::: mediary.Yields
-    options:
-      heading_level: 3
-      show_root_full_path: false
+```{eval-rst}
+.. autoclass:: mediary.Yields
+```
 
 ## Handlers
 
-::: mediary.handler
-    options:
-      heading_level: 3
-      show_root_full_path: false
+```{eval-rst}
+.. autofunction:: mediary.handler
+```
 
-::: mediary.Handler
-    options:
-      heading_level: 3
-      show_root_full_path: false
+```{eval-rst}
+.. autoclass:: mediary.Handler
+```
 
-::: mediary.StreamHandler
-    options:
-      heading_level: 3
-      show_root_full_path: false
+```{eval-rst}
+.. autoclass:: mediary.StreamHandler
+```
 
 ## Behaviors
 
-::: mediary.behavior
-    options:
-      heading_level: 3
-      show_root_full_path: false
+```{eval-rst}
+.. autofunction:: mediary.behavior
+```
 
-::: mediary.Behavior
-    options:
-      heading_level: 3
-      show_root_full_path: false
+```{eval-rst}
+.. autoclass:: mediary.Behavior
+```
 
-::: mediary.StreamBehavior
-    options:
-      heading_level: 3
-      show_root_full_path: false
+```{eval-rst}
+.. autoclass:: mediary.StreamBehavior
+```
 
-::: mediary.Next
-    options:
-      heading_level: 3
-      show_root_full_path: false
+```{py:data} mediary.Next
 
-::: mediary.NextStream
-    options:
-      heading_level: 3
-      show_root_full_path: false
+Calls the rest of the pipeline (the next behavior, or the handler) and returns its result.
+
+An alias of `Callable[[], Awaitable[R]]`.
+```
+
+```{py:data} mediary.NextStream
+
+Opens the rest of a stream's pipeline (the next behavior, or the handler) as an iterator.
+
+An alias of `Callable[[], AsyncIterator[R]]`.
+```
 
 ## Dependency injection
 
-::: mediary.Resolver
-    options:
-      heading_level: 3
-      show_root_full_path: false
+```{eval-rst}
+.. autoclass:: mediary.Resolver
+```
 
 ## Publishing
 
-::: mediary.PublishStrategy
-    options:
-      heading_level: 3
-      show_root_full_path: false
+```{eval-rst}
+.. autoclass:: mediary.PublishStrategy
+```
 
-::: mediary.Sequential
-    options:
-      heading_level: 3
-      show_root_full_path: false
+```{eval-rst}
+.. autoclass:: mediary.Sequential
+```
 
-::: mediary.Concurrent
-    options:
-      heading_level: 3
-      show_root_full_path: false
+```{eval-rst}
+.. autoclass:: mediary.Concurrent
+```
 
 ## Retries
 
 Mark errors as transient, for `RetryBehavior`.
 
-::: mediary.retryable
-    options:
-      heading_level: 3
-      show_root_full_path: false
+```{eval-rst}
+.. autofunction:: mediary.retryable
+```
 
-::: mediary.TransientError
-    options:
-      heading_level: 3
-      show_root_full_path: false
+```{eval-rst}
+.. autoexception:: mediary.TransientError
+```
 
 ## Errors
 
 Every error mediary raises is a `MediaryError`.
 
-::: mediary.MediaryError
-    options:
-      heading_level: 3
-      show_root_full_path: false
+```{eval-rst}
+.. autoexception:: mediary.MediaryError
+```
 
-::: mediary.HandlerNotFound
-    options:
-      heading_level: 3
-      show_root_full_path: false
+```{eval-rst}
+.. autoexception:: mediary.HandlerNotFound
+```
 
-::: mediary.DuplicateHandler
-    options:
-      heading_level: 3
-      show_root_full_path: false
+```{eval-rst}
+.. autoexception:: mediary.DuplicateHandler
+```
 
-::: mediary.NotARequest
-    options:
-      heading_level: 3
-      show_root_full_path: false
+```{eval-rst}
+.. autoexception:: mediary.NotARequest
+```
 
-::: mediary.NotANotification
-    options:
-      heading_level: 3
-      show_root_full_path: false
+```{eval-rst}
+.. autoexception:: mediary.NotANotification
+```
 
-::: mediary.InvalidHandlerSignature
-    options:
-      heading_level: 3
-      show_root_full_path: false
+```{eval-rst}
+.. autoexception:: mediary.InvalidHandlerSignature
+```
 
-::: mediary.InvalidBehaviorSignature
-    options:
-      heading_level: 3
-      show_root_full_path: false
+```{eval-rst}
+.. autoexception:: mediary.InvalidBehaviorSignature
+```
 
-::: mediary.RuleViolation
-    options:
-      heading_level: 3
-      show_root_full_path: false
+```{eval-rst}
+.. autoexception:: mediary.RuleViolation
+```
 
-::: mediary.ScanError
-    options:
-      heading_level: 3
-      show_root_full_path: false
+```{eval-rst}
+.. autoexception:: mediary.ScanError
+```
 
-::: mediary.HandlerTimeout
-    options:
-      heading_level: 3
-      show_root_full_path: false
+```{eval-rst}
+.. autoexception:: mediary.HandlerTimeout
+```

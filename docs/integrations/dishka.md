@@ -13,7 +13,8 @@ Add a `MediaryProvider` to your container. It provides:
 - every handler and behavior **class** the mediator has, with its constructor dependencies resolved by dishka;
 - in each request scope, a **`Mediator`** that resolves from that scope — also provided as `CommandSender`, `QuerySender`, and the mediator's own class.
 
-```python title="shop/orders.py"
+```{code-block} python
+:caption: shop/orders.py
 from dataclasses import dataclass
 
 from mediary import Mediator, Returns, handler, request
@@ -89,8 +90,10 @@ await container.close()
 
 Handlers — and the handlers *they* send to — share the request's dependencies: `PlaceOrderHandler` and `reserve_stock` get the same session, closed when the request scope exits.
 
-!!! warning "Scan first"
-    The provider registers the classes the mediator has when the provider is made. Scan, or register, before making it.
+:::{admonition} Scan first
+:class: warning
+The provider registers the classes the mediator has when the provider is made. Scan, or register, before making it.
+:::
 
 ## Lifetimes
 

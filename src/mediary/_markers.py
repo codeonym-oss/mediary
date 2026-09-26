@@ -1,4 +1,4 @@
-"""Markers the decorators attach, the kinds of message, and the `Returns`/`Yields` markers."""
+"""Markers the decorators attach, the kinds of message, and the ``Returns``/``Yields`` markers."""
 
 import inspect
 from collections.abc import Callable, Iterable
@@ -16,20 +16,20 @@ _MARKER_ATTR: Final = "__mediary_marker__"
 
 
 class Returns(Generic[_R_co]):
-    """Declare what a request's handler returns, so `Mediator.send` is typed.
+    """Declare what a request's handler returns, so ``Mediator.send`` is typed.
 
     It only informs type checkers: it has no behaviour and no runtime cost. Requests that don't
-    inherit it still work, and `send` returns `Any` for them.
+    inherit it still work, and ``send`` returns ``Any`` for them.
 
     Example:
-        ```python
-        @request
-        @dataclass
-        class GetUser(Returns[User]):
-            user_id: int
+        .. code-block:: python
 
-        user = await mediator.send(GetUser(1))  # typed as User
-        ```
+            @request
+            @dataclass
+            class GetUser(Returns[User]):
+                user_id: int
+
+            user = await mediator.send(GetUser(1))  # typed as User
 
     """
 
@@ -37,22 +37,22 @@ class Returns(Generic[_R_co]):
 
 
 class Yields(Generic[_R_co]):
-    """Declare what a stream request's handler yields, so `Mediator.stream` is typed.
+    """Declare what a stream request's handler yields, so ``Mediator.stream`` is typed.
 
-    Like `Returns`, it only informs type checkers. Stream requests that don't inherit it still
-    work, and `stream` yields `Any` for them.
+    Like ``Returns``, it only informs type checkers. Stream requests that don't inherit it still
+    work, and ``stream`` yields ``Any`` for them.
 
     Example:
-        ```python
-        @stream_request
-        @dataclass
-        class ExportOrders(Yields[Order]):
-            since: date
+        .. code-block:: python
 
-        async with mediator.stream(ExportOrders(today)) as orders:
-            async for order in orders:  # typed as Order
-                ...
-        ```
+            @stream_request
+            @dataclass
+            class ExportOrders(Yields[Order]):
+                since: date
+
+            async with mediator.stream(ExportOrders(today)) as orders:
+                async for order in orders:  # typed as Order
+                    ...
 
     """
 
@@ -63,8 +63,8 @@ class Yields(Generic[_R_co]):
 class Marker:
     """What a decorator recorded about a class or function.
 
-    `target` is the request type an `@handler(SomeRequest)` names explicitly, and `lifetime`
-    how long a class handler's instance lives. `order` and `kinds` are a behavior's place in
+    ``target`` is the request type an ``@handler(SomeRequest)`` names explicitly, and ``lifetime``
+    how long a class handler's instance lives. ``order`` and ``kinds`` are a behavior's place in
     the pipeline and the request kinds it wraps (None for all).
     """
 
@@ -76,13 +76,13 @@ class Marker:
 
 
 def mark(obj: _T, marker: Marker) -> _T:
-    """Attach `marker` to a class or function and return it."""
+    """Attach ``marker`` to a class or function and return it."""
     setattr(obj, _MARKER_ATTR, marker)
     return obj
 
 
 def marker_of(obj: object) -> Marker | None:
-    """Return the marker decorated onto `obj` itself (never one inherited by a class)."""
+    """Return the marker decorated onto ``obj`` itself (never one inherited by a class)."""
     marker = getattr(obj, "__dict__", {}).get(_MARKER_ATTR)
     return marker if isinstance(marker, Marker) else None
 
@@ -91,8 +91,8 @@ def marker_of(obj: object) -> Marker | None:
 class HandlerInfo:
     """What a kind's rules are told about a handler being registered for one of its messages.
 
-    `returns` is the handler's resolved return hint (`type(None)` for `-> None`), or
-    `inspect.Signature.empty` when it has none.
+    ``returns`` is the handler's resolved return hint (``type(None)`` for ``-> None``), or
+    ``inspect.Signature.empty`` when it has none.
     """
 
     message_type: type
@@ -108,7 +108,7 @@ HandlerRule = Callable[[HandlerInfo], str | None]
 class Kind:
     """A kind of message, such as "request". Calling it decorates a class as that kind.
 
-    Create kinds with `define_kind`.
+    Create kinds with ``define_kind``.
     """
 
     name: str
@@ -116,11 +116,11 @@ class Kind:
     rules: tuple[HandlerRule, ...] = ()
 
     def __call__(self, cls: _C, /) -> _C:
-        """Mark `cls` as a message of this kind and return it unchanged."""
+        """Mark ``cls`` as a message of this kind and return it unchanged."""
         return mark(cls, Marker(kind=self.name))
 
     def check(self, info: HandlerInfo) -> str | None:
-        """Return why the handler `info` describes breaks a rule of this kind, or None."""
+        """Return why the handler ``info`` describes breaks a rule of this kind, or None."""
         for rule in self.rules:
             reason = rule(info)
             if reason is not None:
@@ -133,32 +133,32 @@ _KINDS: dict[str, Kind] = {}
 
 
 def define_kind(name: str, *, dispatch: Dispatch, rules: Iterable[HandlerRule] = ()) -> Kind:
-    """Define a new kind of message; the returned `Kind` is its class decorator.
+    """Define a new kind of message; the returned ``Kind`` is its class decorator.
 
-    Messages of a `dispatch="send"` kind have exactly one handler and go through
-    `Mediator.send`; those of a `dispatch="publish"` kind have any number and go through
-    `Mediator.publish`; those of a `dispatch="stream"` kind have exactly one async generator
-    handler and go through `Mediator.stream`. Every handler registered or scanned for a
-    message of the kind must pass each of `rules`. Behaviors target the kind by name, with
-    `kinds={name}`.
+    Messages of a ``dispatch="send"`` kind have exactly one handler and go through
+    ``Mediator.send``; those of a ``dispatch="publish"`` kind have any number and go through
+    ``Mediator.publish``; those of a ``dispatch="stream"`` kind have exactly one async generator
+    handler and go through ``Mediator.stream``. Every handler registered or scanned for a
+    message of the kind must pass each of ``rules``. Behaviors target the kind by name, with
+    ``kinds={name}``.
 
     Kinds are global, like the classes they decorate, so define each one once, at import time.
 
     Example:
-        ```python
-        def must_return(info: HandlerInfo) -> str | None:
-            if info.returns is type(None):
-                return "it must return a result"
-            return None
+        .. code-block:: python
 
-        lookup = define_kind("lookup", dispatch="send", rules=[must_return])
+            def must_return(info: HandlerInfo) -> str | None:
+                if info.returns is type(None):
+                    return "it must return a result"
+                return None
 
-        @lookup
-        class FindUser(Returns[User]): ...
-        ```
+            lookup = define_kind("lookup", dispatch="send", rules=[must_return])
+
+            @lookup
+            class FindUser(Returns[User]): ...
 
     Raises:
-        ValueError: `name` is already defined or reserved, or `dispatch` is unknown.
+        ValueError: ``name`` is already defined or reserved, or ``dispatch`` is unknown.
 
     """
     if name in _KINDS or name in _RESERVED:
@@ -170,7 +170,7 @@ def define_kind(name: str, *, dispatch: Dispatch, rules: Iterable[HandlerRule] =
 
 
 def kind_of(cls: type) -> Kind | None:
-    """Return the kind `cls` itself is decorated as, or None if it isn't a message."""
+    """Return the kind ``cls`` itself is decorated as, or None if it isn't a message."""
     marker = marker_of(cls)
     return _KINDS.get(marker.kind) if marker is not None else None
 
@@ -181,7 +181,7 @@ _STREAM_REQUEST = define_kind("stream_request", dispatch="stream")
 
 
 def request(cls: _C) -> _C:
-    """Mark a class as a request that `Mediator.send` dispatches to exactly one handler.
+    """Mark a class as a request that ``Mediator.send`` dispatches to exactly one handler.
 
     The class is returned unchanged apart from the marker; it can be a dataclass, a pydantic
     model or any plain class. Subclasses are not requests unless they are decorated too.
@@ -190,7 +190,7 @@ def request(cls: _C) -> _C:
 
 
 def notification(cls: _C) -> _C:
-    """Mark a class as a notification that `Mediator.publish` sends to all of its handlers.
+    """Mark a class as a notification that ``Mediator.publish`` sends to all of its handlers.
 
     A notification has zero or more handlers, written like request handlers. Subclasses are
     not notifications unless they are decorated too.
@@ -199,15 +199,15 @@ def notification(cls: _C) -> _C:
 
 
 def stream_request(cls: _C) -> _C:
-    """Mark a class as a request that `Mediator.stream` dispatches to one async generator handler.
+    """Mark a class as a request that ``Mediator.stream`` dispatches to one async generator handler.
 
-    Its handler yields any number of items, which the caller consumes with `async for` as they
+    Its handler yields any number of items, which the caller consumes with ``async for`` as they
     are produced. Subclasses are not stream requests unless they are decorated too.
     """
     return _STREAM_REQUEST(cls)
 
 
 def is_notification(cls: type) -> bool:
-    """Whether `cls` itself is decorated as a kind of message that is published."""
+    """Whether ``cls`` itself is decorated as a kind of message that is published."""
     kind = kind_of(cls)
     return kind is not None and kind.dispatch == "publish"

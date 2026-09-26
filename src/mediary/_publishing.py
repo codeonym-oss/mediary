@@ -10,13 +10,13 @@ NotificationHandler = Callable[[], Awaitable[Any]]
 
 
 class PublishStrategy(Protocol):
-    """Runs the handlers of a notification, in `Mediator.publish`.
+    """Runs the handlers of a notification, in ``Mediator.publish``.
 
     Handlers are given in a deterministic order: by fully qualified name.
     """
 
     async def publish(self, handlers: Sequence[NotificationHandler], /) -> None:
-        """Run `handlers`."""
+        """Run ``handlers``."""
         ...
 
 
@@ -33,8 +33,8 @@ class Concurrent:
     """Run all handlers concurrently, in a task group.
 
     Every handler runs to completion even if others fail; failures are then raised together
-    as an `ExceptionGroup`, in handler order. It runs on asyncio, or on trio and other event
-    loops through AnyIO (`mediary[anyio]`).
+    as an ``ExceptionGroup``, in handler order. It runs on asyncio, or on trio and other event
+    loops through AnyIO (``mediary[anyio]``).
     """
 
     async def publish(self, handlers: Sequence[NotificationHandler], /) -> None:

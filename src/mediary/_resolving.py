@@ -1,4 +1,4 @@
-"""The `Resolver` seam, and reading the parameters of handler and behavior callables."""
+"""The ``Resolver`` seam, and reading the parameters of handler and behavior callables."""
 
 import inspect
 import typing
@@ -9,31 +9,31 @@ from typing import Any, Protocol, TypeVar
 _T = TypeVar("_T")
 
 ErrorFactory = Callable[[Any, str], Exception]
-"""Builds the error to raise for a malformed callable: `(source, reason) -> exception`."""
+"""Builds the error to raise for a malformed callable: ``(source, reason) -> exception``."""
 
 
 class Resolver(Protocol):
     """Supplies handler and behavior instances, and the dependencies of functions.
 
-    Plug a DI container in by adapting it to `resolve`, which may be sync or async. The
-    default resolver calls `cls()`.
+    Plug a DI container in by adapting it to ``resolve``, which may be sync or async. The
+    default resolver calls ``cls()``.
 
     Example:
-        ```python
-        class ContainerResolver:
-            def __init__(self, container: Container) -> None:
-                self.container = container
+        .. code-block:: python
 
-            def resolve(self, cls: type[T]) -> T:
-                return self.container.get(cls)
+            class ContainerResolver:
+                def __init__(self, container: Container) -> None:
+                    self.container = container
 
-        mediator = Mediator(resolver=ContainerResolver(container))
-        ```
+                def resolve(self, cls: type[T]) -> T:
+                    return self.container.get(cls)
+
+            mediator = Mediator(resolver=ContainerResolver(container))
 
     """
 
     def resolve(self, cls: type[_T], /) -> _T | Awaitable[_T]:
-        """Return an instance of `cls`."""
+        """Return an instance of ``cls``."""
         ...
 
 
@@ -41,18 +41,18 @@ class DefaultResolver:
     """Instantiates each type with no arguments."""
 
     def resolve(self, cls: type[_T], /) -> _T:
-        """Return `cls()`."""
+        """Return ``cls()``."""
         return cls()
 
 
 async def resolve(resolver: Resolver, cls: Any) -> Any:
-    """Resolve `cls` with `resolver`, awaiting the result if it is awaitable."""
+    """Resolve ``cls`` with ``resolver``, awaiting the result if it is awaitable."""
     instance = resolver.resolve(cls)
     return await instance if inspect.isawaitable(instance) else instance
 
 
 def require_async(source: Any, fn: Any, needs: str, error: ErrorFactory) -> Callable[..., Any]:
-    """Return `fn` if it is an async function or generator, else raise `error(source, ...)`."""
+    """Return ``fn`` if it is an async function or generator, else raise ``error(source, ...)``."""
     if not (inspect.iscoroutinefunction(fn) or inspect.isasyncgenfunction(fn)):
         raise error(source, f"it needs {needs}")
     return fn
@@ -62,8 +62,8 @@ def require_async(source: Any, fn: Any, needs: str, error: ErrorFactory) -> Call
 class Shape:
     """The parameters of a handler or behavior callable.
 
-    `leading` are the parameters mediary passes positionally (the request, then `next` for
-    behaviors); `hints` their resolved type hints. The rest are dependencies, resolved by
+    ``leading`` are the parameters mediary passes positionally (the request, then ``next`` for
+    behaviors); ``hints`` their resolved type hints. The rest are dependencies, resolved by
     type hint on each call.
     """
 
@@ -73,7 +73,7 @@ class Shape:
     keyword: tuple[tuple[str, Any], ...] = ()
 
     def hint(self, index: int) -> Any:
-        """Return the type hint of the `index`-th leading parameter, or None."""
+        """Return the type hint of the ``index``-th leading parameter, or None."""
         return self.hints.get(self.leading[index].name)
 
     async def dependencies(self, resolver: Resolver) -> tuple[list[Any], dict[str, Any]]:
@@ -95,13 +95,13 @@ def shape(
     method: bool,
     error: ErrorFactory,
 ) -> Shape:
-    """Read the shape of `fn`, which takes `leading` positional parameters then dependencies.
+    """Read the shape of ``fn``, which takes ``leading`` positional parameters then dependencies.
 
-    For a `method`, `self` is skipped and any further parameters are left alone (a class gets
+    For a ``method``, ``self`` is skipped and any further parameters are left alone (a class gets
     its dependencies through the resolver instead).
 
     Raises:
-        Exception: from `error(source, reason)`, when a leading parameter is missing or not
+        Exception: from ``error(source, reason)``, when a leading parameter is missing or not
             positional, a dependency is variadic or unhinted, or the hints can't be resolved.
 
     """

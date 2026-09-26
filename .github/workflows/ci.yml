@@ -76,18 +76,18 @@ jobs:
   build-check:
     uses: ./.github/workflows/build.yml
 
-  # Strict: broken links, references and docstrings fail. The release workflow deploys it.
+  # Warnings are errors: broken links, references and docstrings fail. Read the Docs deploys it
+  # (see .readthedocs.yaml), and builds a preview of each pull request.
   docs:
     runs-on: ubuntu-latest
-    env:
-      NO_MKDOCS_2_WARNING: "1"
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           enable-cache: true
-      - run: uv sync --frozen --no-default-groups --group docs
-      - run: uv run --frozen --no-sync mkdocs build --strict
+          python-version: "3.13" # Sphinx 9 needs 3.12+
+      - run: uv sync --frozen --no-default-groups --group docs --extra full
+      - run: uv run --frozen --no-sync sphinx-build -W --keep-going -b dirhtml docs docs/_build/html
 
   # Single stable check name for the branch ruleset, independent of the matrix.
   ci-ok:

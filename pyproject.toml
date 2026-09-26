@@ -33,7 +33,7 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://github.com/codeonym-oss/mediary"
-Documentation = "https://codeonym-oss.github.io/mediary/"
+Documentation = "https://docs.codeonym.work/projects/mediary/"
 Repository = "https://github.com/codeonym-oss/mediary"
 Issues = "https://github.com/codeonym-oss/mediary/issues"
 Changelog = "https://github.com/codeonym-oss/mediary/blob/main/CHANGELOG.md"
@@ -71,12 +71,12 @@ dev = [
     # Every extra, so pyright and the full test run see all of mediary.
     "mediary[full]",
 ]
-# The docs site: `uv run mkdocs serve`.
+# The docs site (see CONTRIBUTING.md). Sphinx 9 needs Python 3.12+, so on 3.11 this is empty.
 docs = [
-    "mike>=2.2",
-    "mkdocs>=1.6,<2",
-    "mkdocs-material>=9.7",
-    "mkdocstrings[python]>=1.0",
+    "myst-parser>=5.1; python_version >= '3.12'",
+    "shibuya>=2026.7; python_version >= '3.12'",
+    "sphinx>=9.1; python_version >= '3.12'",
+    "sphinx-autobuild>=2025.8; python_version >= '3.12'",
 ]
 
 [tool.ruff]

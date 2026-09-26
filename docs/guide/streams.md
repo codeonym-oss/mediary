@@ -6,7 +6,8 @@ Some requests answer with many items: rows of an export, pages of search results
 
 Decorate the request with `@stream_request`, declare its items with `Yields[...]`, and `yield` them from the handler:
 
-```python title="shop/exports.py"
+```{code-block} python
+:caption: shop/exports.py
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 

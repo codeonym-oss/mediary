@@ -1,16 +1,16 @@
 """Ready-made behaviors: logging, retry and timeout.
 
-They are never scanned; add the ones you want, configured, with `Mediator.use`:
+They are never scanned; add the ones you want, configured, with ``Mediator.use``:
 
-```python
-mediator.use(LoggingBehavior(), order=-100)
-mediator.use(TimeoutBehavior(seconds=5), order=-50)
-mediator.use(RetryBehavior(max_retries=3), kinds={"request"})
-```
+.. code-block:: python
 
-They wrap every message they are added for, so narrow them with `kinds=` where it matters:
+    mediator.use(LoggingBehavior(), order=-100)
+    mediator.use(TimeoutBehavior(seconds=5), order=-50)
+    mediator.use(RetryBehavior(max_retries=3), kinds={"request"})
+
+They wrap every message they are added for, so narrow them with ``kinds=`` where it matters:
 retrying is only safe for handlers that can run twice. They run on asyncio, or on trio and
-other event loops through AnyIO (`mediary[anyio]`).
+other event loops through AnyIO (``mediary[anyio]``).
 """
 
 import logging
@@ -37,12 +37,12 @@ def _qualified_name(cls: type) -> str:
 class LoggingBehavior:
     """Log each message's start, completion (or slowness) and failure, with its duration.
 
-    Records carry structured `extra` fields: `mediary_kind` (the decorator kind, such as
-    "request" or "notification"), `mediary_type` (the message's qualified class name),
-    `mediary_payload` (its repr, truncated) and, once finished, `mediary_duration_ms`.
+    Records carry structured ``extra`` fields: ``mediary_kind`` (the decorator kind, such as
+    "request" or "notification"), ``mediary_type`` (the message's qualified class name),
+    ``mediary_payload`` (its repr, truncated) and, once finished, ``mediary_duration_ms``.
 
-    Levels: start is DEBUG, completion `level` (INFO), completion slower than `slow_after`
-    seconds WARNING, and failure ERROR with the traceback. `clock` returns seconds; inject one
+    Levels: start is DEBUG, completion ``level`` (INFO), completion slower than ``slow_after``
+    seconds WARNING, and failure ERROR with the traceback. ``clock`` returns seconds; inject one
     to test timing.
     """
 
@@ -105,14 +105,14 @@ class LoggingBehavior:
 class RetryBehavior:
     """Run the rest of the pipeline again when it fails with a transient error.
 
-    An error is transient when its class is marked `@retryable` (as `TransientError` and its
-    subclasses are) or is one of `retry_on`, which is for errors that can't be marked, such as
-    `ConnectionError`. Any other error fails at once.
+    An error is transient when its class is marked ``@retryable`` (as ``TransientError`` and its
+    subclasses are) or is one of ``retry_on``, which is for errors that can't be marked, such as
+    ``ConnectionError``. Any other error fails at once.
 
-    After the first attempt it retries up to `max_retries` times, sleeping an exponentially
-    growing delay between attempts: `base_delay * 2**n`, capped at `max_delay`, and with
-    `jitter` a random fraction of that (full jitter), so that callers don't retry in lockstep.
-    The last error propagates. Inject `sleep` and `random` to test without waiting.
+    After the first attempt it retries up to ``max_retries`` times, sleeping an exponentially
+    growing delay between attempts: ``base_delay * 2**n``, capped at ``max_delay``, and with
+    ``jitter`` a random fraction of that (full jitter), so that callers don't retry in lockstep.
+    The last error propagates. Inject ``sleep`` and ``random`` to test without waiting.
     """
 
     def __init__(
@@ -143,7 +143,7 @@ class RetryBehavior:
         self.random = random
 
     async def handle(self, message: object, next: Next[_T]) -> _T:
-        """Call `next()` until it succeeds or the retries run out."""
+        """Call ``next()`` until it succeeds or the retries run out."""
         for retry in range(self.max_retries):
             try:
                 return await next()
@@ -154,19 +154,19 @@ class RetryBehavior:
         return await next()
 
     def retries(self, error: Exception) -> bool:
-        """Whether `error` is transient: marked `@retryable`, or one of `retry_on`."""
+        """Whether ``error`` is transient: marked ``@retryable``, or one of ``retry_on``."""
         return is_retryable(error) or isinstance(error, self.retry_on)
 
     def delay(self, retry: int) -> float:
-        """Return the seconds to wait before retry number `retry` (counting from 0)."""
+        """Return the seconds to wait before retry number ``retry`` (counting from 0)."""
         delay = min(self.max_delay, self.base_delay * 2**retry)
         return delay * self.random() if self.jitter else delay
 
 
 class TimeoutBehavior:
-    """Fail with `HandlerTimeout` when the rest of the pipeline takes longer than `seconds`.
+    """Fail with ``HandlerTimeout`` when the rest of the pipeline takes longer than ``seconds``.
 
-    The downstream work is cancelled. A `TimeoutError` raised by the handler itself passes
+    The downstream work is cancelled. A ``TimeoutError`` raised by the handler itself passes
     through unchanged.
     """
 
@@ -174,7 +174,7 @@ class TimeoutBehavior:
         """Set the time limit.
 
         Raises:
-            ValueError: `seconds` isn't positive.
+            ValueError: ``seconds`` isn't positive.
 
         """
         if seconds <= 0:
@@ -182,7 +182,7 @@ class TimeoutBehavior:
         self.seconds = seconds
 
     async def handle(self, message: object, next: Next[_T]) -> _T:
-        """Await `next()` within the time limit."""
+        """Await ``next()`` within the time limit."""
         try:
             return await within(self.seconds, next)
         except Expired as exc:

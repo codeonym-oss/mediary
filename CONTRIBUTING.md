@@ -107,16 +107,31 @@ Keep a PR to one issue. Fill in the PR template's checklist.
 
 ## Documentation
 
-The docs site is built with [MkDocs Material](https://squidfunk.github.io/mkdocs-material/) from
-`docs/`, and its API reference from the docstrings (Google style; fence examples as
-```` ```python ````). Preview it with `uv run mkdocs serve`; CI builds it with `--strict`, so
-broken links and references fail.
+The docs site is built with [Sphinx](https://www.sphinx-doc.org/), the
+[Shibuya](https://shibuya.lepture.com/) theme and [MyST](https://myst-parser.readthedocs.io/)
+Markdown from `docs/`. Preview it, rebuilt on every save, at http://127.0.0.1:8000:
+
+```sh
+uv run --isolated --python 3.13 --group docs --extra full \
+  sphinx-autobuild -b dirhtml docs docs/_build/html
+```
+
+Sphinx 9 needs Python 3.12+, hence `--python 3.13`; `--isolated` keeps it out of `.venv`.
+CI builds the site with `-W`, so broken links, references and docstrings fail the build.
+
+- **Pages** are MyST Markdown. Use `{code-block} python` with a `:caption: pkg/mod.py` for a
+  titled example, and `:::{admonition} Title` with a `:class: note` for a callout.
+- **The API reference** is autodoc on each module's `__all__`: docstrings are Google style,
+  with reST inside, so literals take double backticks (` ``send`` `) and examples go in a
+  `.. code-block:: python` directive under `Example:`.
 
 Every Python example in `docs/` and the README runs in the test suite, page by page
 (`tests/test_examples.py` explains the conventions), so keep them runnable.
 
-Each push to `main` publishes the `dev` docs; each release publishes its `X.Y` version as
-`latest`. Versions are kept on the `gh-pages` branch by [mike](https://github.com/jimporter/mike).
+[Read the Docs](https://app.readthedocs.org/projects/mediary/) builds and hosts the site at
+https://docs.codeonym.work/projects/mediary/, configured by `.readthedocs.yaml`: `latest` is
+`main`, each release tag gets its own version, and `stable` is the newest release. It also
+builds a preview of each pull request, linked from the PR's checks.
 
 ## Releases
 

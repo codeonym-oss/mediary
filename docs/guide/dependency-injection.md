@@ -8,7 +8,8 @@ Handlers need things — a database session, a repository, an HTTP client. media
 - **Function handlers** get the request first; every parameter after it is resolved by its type hint, on every call.
 - **Behaviors** follow the same rules: [class behaviors](behaviors.md) are resolved, and a function behavior's parameters after `next` are.
 
-```python title="shop/stock.py"
+```{code-block} python
+:caption: shop/stock.py
 from dataclasses import dataclass
 
 from mediary import Returns, handler, request

@@ -1,0 +1,21 @@
+# Read the Docs builds the docs site from this file: `latest` from main, a version per release
+# tag (the newest is `stable`), and a preview of each pull request.
+# Served at https://docs.codeonym.work/projects/mediary/, a subproject of the codeonym docs hub.
+version: 2
+
+build:
+  os: ubuntu-24.04
+  tools:
+    python: "3.13" # Sphinx 9 needs 3.12+
+
+python:
+  install:
+    - method: uv
+      command: sync
+      groups: [docs]
+      extras: [full] # the integrations' modules import their frameworks
+
+sphinx:
+  configuration: docs/conf.py
+  builder: dirhtml
+  fail_on_warning: true
