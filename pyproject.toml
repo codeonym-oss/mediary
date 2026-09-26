@@ -8,10 +8,14 @@ license-files = ["LICENSE"]
 authors = [{ name = "codeonym-oss" }]
 requires-python = ">=3.11"
 dependencies = []
-keywords = ["mediator", "cqrs", "asyncio", "pipeline", "middleware", "command", "query"]
+keywords = [
+    "mediator", "cqrs", "asyncio", "pipeline", "middleware", "command", "query", "notification",
+    "dependency-injection",
+]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Framework :: AsyncIO",
+    "Framework :: Pytest",
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
