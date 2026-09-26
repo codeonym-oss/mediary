@@ -3,8 +3,8 @@
 from collections.abc import Sequence
 
 
-def _name(cls: type) -> str:
-    return f"{cls.__module__}.{cls.__qualname__}"
+def _name(obj: object) -> str:
+    return f"{getattr(obj, '__module__', '?')}.{getattr(obj, '__qualname__', obj)}"
 
 
 class MediaryError(Exception):
@@ -25,7 +25,7 @@ class HandlerNotFound(MediaryError, LookupError):
 class DuplicateHandler(MediaryError, ValueError):
     """A second handler was registered for a request type that already has one."""
 
-    def __init__(self, request_type: type, existing: type, duplicate: type) -> None:
+    def __init__(self, request_type: type, existing: object, duplicate: object) -> None:
         self.request_type = request_type
         self.existing = existing
         self.duplicate = duplicate
@@ -49,7 +49,7 @@ class NotARequest(MediaryError, TypeError):
 class InvalidHandlerSignature(MediaryError, TypeError):
     """A handler doesn't have the shape mediary can call."""
 
-    def __init__(self, handler: type, reason: str) -> None:
+    def __init__(self, handler: object, reason: str) -> None:
         self.handler = handler
         super().__init__(f"Invalid handler {_name(handler)}: {reason}")
 
