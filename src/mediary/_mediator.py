@@ -1,26 +1,28 @@
-"""The mediator: routes requests to their one handler and notifications to all of theirs."""
+"""The mediator: routes requests and streams to their one handler, notifications to all theirs."""
 
-from collections.abc import Awaitable, Callable, Iterable
+from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Iterable
 from dataclasses import dataclass, field
 from functools import partial
 from types import ModuleType
 from typing import Any, Concatenate, TypeVar, overload
 
-from ._behaviors import Behavior, BehaviorBinding, bind_behavior, pipeline
+from ._behaviors import Behavior, BehaviorBinding, StreamBehavior, bind_behavior, pipeline
 from ._errors import (
     DuplicateHandler,
     HandlerNotFound,
+    InvalidHandlerSignature,
     MediaryError,
     NotANotification,
     NotARequest,
     RuleViolation,
     ScanError,
 )
-from ._handlers import Binding, Handler, bind
-from ._markers import HandlerInfo, Returns, is_notification, kind_of, marker_of
+from ._handlers import Binding, Handler, StreamHandler, bind
+from ._markers import HandlerInfo, Returns, Yields, is_notification, kind_of, marker_of
 from ._publishing import PublishStrategy, Sequential
 from ._resolving import DefaultResolver, Resolver
 from ._scan import discover
+from ._streaming import Stream, layer, through
 
 _Req = TypeVar("_Req")
 _R = TypeVar("_R")
@@ -30,7 +32,7 @@ _SCANNED_KINDS = frozenset({"handler", "behavior"})
 
 @dataclass
 class _Staged:
-    """Handlers being added: one per request type, any number per notification type."""
+    """Handlers being added: one per request or stream type, any number per notification type."""
 
     requests: dict[type, Binding] = field(default_factory=dict[type, Binding])
     notifications: list[Binding] = field(default_factory=list[Binding])
@@ -38,6 +40,8 @@ class _Staged:
 
 class Mediator:
     """Sends requests to their handler and publishes notifications to theirs, via behaviors.
+
+    It also streams the items of stream requests from their async generator handler.
 
     Each mediator has its own registrations; two mediators never share handlers or behaviors.
     Handler and behavior classes, and the dependencies of functions, come from `resolver`,
@@ -61,18 +65,23 @@ class Mediator:
     def register(
         self,
         request_type: type[_Req],
-        handler: type[Handler[_Req, Any]] | Callable[Concatenate[_Req, ...], Awaitable[Any]],
+        handler: type[Handler[_Req, Any]]
+        | type[StreamHandler[_Req, Any]]
+        | Callable[Concatenate[_Req, ...], Awaitable[Any]]
+        | Callable[Concatenate[_Req, ...], AsyncIterator[Any]],
     ) -> None:
         """Register `handler`, a handler class or async function, for `request_type`.
 
-        `request_type` is a request, which has exactly one handler, or a notification, which
-        has any number. A class handler is resolved for every call, unless it is decorated
-        with `@handler(lifetime="singleton")`. Registering the same handler for the same type
-        again changes nothing.
+        `request_type` is a request or a stream request, which has exactly one handler, or a
+        notification, which has any number. A stream request's handler is an async generator.
+        A class handler is resolved for every call, unless it is decorated with
+        `@handler(lifetime="singleton")`. Registering the same handler for the same type again
+        changes nothing.
 
         Raises:
             NotARequest: `request_type` isn't decorated with `@request` or `@notification`.
-            InvalidHandlerSignature: `handler` has the wrong shape (see `@handler`).
+            InvalidHandlerSignature: `handler` has the wrong shape (see `@handler`), or is an
+                async generator for a message that isn't streamed, or isn't one for one that is.
             RuleViolation: `handler` breaks a rule of the kind of `request_type`.
             DuplicateHandler: the request `request_type` already has another handler.
 
@@ -83,7 +92,12 @@ class Mediator:
 
     def use(
         self,
-        behavior: type[Behavior[Any, Any]] | Behavior[Any, Any] | Callable[..., Awaitable[Any]],
+        behavior: type[Behavior[Any, Any]]
+        | type[StreamBehavior[Any, Any]]
+        | Behavior[Any, Any]
+        | StreamBehavior[Any, Any]
+        | Callable[..., Awaitable[Any]]
+        | Callable[..., AsyncIterator[Any]],
         *,
         order: int | None = None,
         kinds: Iterable[str] | None = None,
@@ -141,6 +155,15 @@ class Mediator:
         kind = kind_of(target)
         if kind is None:
             raise NotARequest(target)
+        streamed = kind.dispatch == "stream"
+        if binding.streams != streamed:
+            raise InvalidHandlerSignature(
+                binding.source,
+                f"@{kind.name} handlers are async generators that `yield` their items"
+                if streamed
+                else f"it is an async generator, but @{kind.name} handlers `return` a result; "
+                "only the handlers of stream requests `yield`",
+            )
         reason = kind.check(HandlerInfo(target, binding.source, binding.returns))
         if reason is not None:
             raise RuleViolation(binding.source, kind.name, reason)
@@ -180,7 +203,7 @@ class Mediator:
 
         """
         binding = self._bindings.get(type(request))
-        if binding is None:
+        if binding is None or binding.streams:
             raise HandlerNotFound(type(request))
         return await self._through_pipeline(
             request, partial(binding.invoke, request, self._resolver)
@@ -207,16 +230,62 @@ class Mediator:
         run = partial((strategy or self._strategy).publish, handlers)
         await self._through_pipeline(notification, run)
 
-    async def _through_pipeline(
-        self, message: object, terminal: Callable[[], Awaitable[Any]]
-    ) -> Any:
-        """Run the behaviors that wrap `type(message)` around `terminal`."""
-        message_type = type(message)
+    @overload
+    def stream(self, request: Yields[_R], /) -> Stream[_R]: ...
+    @overload
+    def stream(self, request: object, /) -> Stream[Any]: ...
+    def stream(self, request: object, /) -> Stream[Any]:
+        """Stream the items `request`'s handler yields, through its stream behaviors.
+
+        Nothing runs until the stream is iterated. Iterate it inside `async with` to close the
+        handler and behaviors as soon as the block exits (see `Stream`). The items are typed
+        from the request's `Yields[...]` base, or `Any` without one.
+
+        Example:
+            async with mediator.stream(ExportOrders(since)) as orders:
+                async for order in orders:
+                    ...
+
+        Raises:
+            HandlerNotFound: no handler is registered for exactly `type(request)`, as a
+                stream request.
+
+        """
+        binding = self._bindings.get(type(request))
+        if binding is None or not binding.streams:
+            raise HandlerNotFound(type(request))
+        return self._through_stream(request, partial(binding.invoke, request, self._resolver))
+
+    def _through_stream(
+        self, message: object, start: Callable[[], Awaitable[AsyncGenerator[Any, None]]]
+    ) -> Stream[Any]:
+        """Layer the stream behaviors that wrap `type(message)` around the items of `start()`."""
+        behaviors = self._pipeline(type(message))
+        resolver = self._resolver
+
+        def open(index: int) -> AsyncGenerator[Any, None]:
+            if index == len(behaviors):
+                return through(start)
+            behavior = behaviors[index]
+            return layer(
+                lambda next: behavior.invoke(message, next, resolver), partial(open, index + 1)
+            )
+
+        return Stream(open(0))
+
+    def _pipeline(self, message_type: type) -> tuple[BehaviorBinding, ...]:
         behaviors = self._pipelines.get(message_type)
         if behaviors is None:
             behaviors = self._pipelines[message_type] = pipeline(
                 self._behaviors.values(), message_type
             )
+        return behaviors
+
+    async def _through_pipeline(
+        self, message: object, terminal: Callable[[], Awaitable[Any]]
+    ) -> Any:
+        """Run the behaviors that wrap `type(message)` around `terminal`."""
+        behaviors = self._pipeline(type(message))
         resolver = self._resolver
 
         async def call(index: int) -> Any:

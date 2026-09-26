@@ -71,7 +71,7 @@ def test_kind_names_are_unique(name: str) -> None:
 
 
 def test_dispatch_must_be_known() -> None:
-    with pytest.raises(ValueError, match='"send" or "publish"'):
+    with pytest.raises(ValueError, match='"send", "publish" or "stream"'):
         define_kind("unknown_dispatch", dispatch="broadcast")  # pyright: ignore[reportArgumentType]
 
 

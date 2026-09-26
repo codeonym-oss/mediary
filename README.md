@@ -10,7 +10,7 @@ Typed, decorator-driven mediator + CQRS for Python — handlers, pipelines and n
 - **Decorate, don't register.** Mark requests with `@request` and handlers with `@handler`; one `mediator.scan("app")` wires the whole package.
 - **Typed end to end.** `await mediator.send(GetUser(1))` is typed as `User`; handlers are plain classes or functions, matched structurally.
 - **Pipelines.** Behaviors (middleware) wrap handlers, targeted by type, Protocol or kind, and ordered. Logging, retry and timeout ship ready-made.
-- **Notifications**, with sequential or concurrent publishing.
+- **Notifications**, with sequential or concurrent publishing, and **streams** of items from async generators.
 - **CQRS pack.** `@command`, `@query`, `@event`, and senders that can only send one kind.
 - **Pluggable DI**, **testing helpers** and a **pytest fixture**. Zero dependencies, asyncio only, Python 3.11+.
 
@@ -215,6 +215,49 @@ assert emails == ["order 42 confirmed"] * 2
 
 `Concurrent` runs every handler even when some fail, then raises their errors together in an `ExceptionGroup`. Pass `Mediator(publish_strategy=...)` to change the default, or write your own strategy.
 
+## Streams
+
+A stream request's handler is an async generator: it yields items one by one, and the caller consumes them as they come, with backpressure:
+
+```python
+from collections.abc import AsyncIterator
+
+from mediary import NextStream, Yields, stream_request
+
+
+@stream_request
+@dataclass
+class ExportOrders(Yields[int]):
+    count: int
+
+
+async def export_orders(request: ExportOrders) -> AsyncIterator[int]:
+    for order_id in range(1, request.count + 1):
+        yield order_id  # e.g. rows from a database cursor
+
+
+@behavior
+async def skip_odd(request: ExportOrders, next: NextStream[int]) -> AsyncIterator[int]:
+    async for order_id in next():
+        if order_id % 2 == 0:
+            yield order_id
+
+
+mediator = Mediator()
+mediator.register(ExportOrders, export_orders)
+mediator.use(skip_odd)
+
+exported = []
+async with mediator.stream(ExportOrders(100)) as orders:  # typed as Stream[int]
+    async for order_id in orders:
+        if order_id > 4:
+            break  # the handler and behaviors are closed as the block exits
+        exported.append(order_id)
+assert exported == [2, 4]
+```
+
+Nothing runs until the stream is iterated. Behaviors that are async generators wrap streams, and get the rest of the pipeline from `next()`; other behaviors never do. Plain `async for` works too, but only `async with` (or `aclose()`) closes the pipeline as soon as you stop, rather than whenever the stream is garbage-collected. Cancelling the consumer cancels the handler where it is waiting.
+
 ## CQRS
 
 `mediary.cqrs` speaks the language of CQRS: commands change state, queries read it, and events announce what happened.
@@ -307,7 +350,7 @@ async def test_placing_an_order_announces_it(mediator: RecordingMediator) -> Non
     assert mediator.published_of(OrderPlaced) == [OrderPlaced(7)]
 ```
 
-Stubs stand in for handlers — `mediator.stub(PlaceOrder, raises=CardDeclined())` fails instead — and behaviors still wrap them. Every mediator is isolated, so tests never share registrations.
+Stubs stand in for handlers — `mediator.stub(PlaceOrder, raises=CardDeclined())` fails instead, and `mediator.stub(ExportOrders, [2, 4])` yields those items — and behaviors still wrap them. Streams are recorded in `mediator.streamed`. Every mediator is isolated, so tests never share registrations.
 
 ## Why not register by hand?
 
