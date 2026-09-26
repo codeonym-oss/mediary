@@ -1,12 +1,9 @@
 import importlib
 import sys
-import textwrap
-import uuid
-from collections.abc import Callable, Iterator
-from pathlib import Path
 from typing import Any
 
 import pytest
+from conftest import MakePackage
 
 from mediary import (
     DuplicateHandler,
@@ -18,8 +15,6 @@ from mediary import (
     handler,
     request,
 )
-
-MakePackage = Callable[[dict[str, str]], str]
 
 REQUESTS = """
     from mediary import Returns, request
@@ -33,33 +28,6 @@ REQUESTS = """
     class Ping:
         pass
 """
-
-
-@pytest.fixture
-def make_package(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[MakePackage]:
-    """Write a uniquely named package from `{relative path: source}` and return its name."""
-    monkeypatch.syspath_prepend(tmp_path)  # pyright: ignore[reportUnknownMemberType]
-    names: list[str] = []
-
-    def make(files: dict[str, str]) -> str:
-        name = f"scanned_{uuid.uuid4().hex}"
-        names.append(name)
-        root = tmp_path / name
-        for relative, source in {"__init__.py": "", **files}.items():
-            path = root / relative
-            path.parent.mkdir(parents=True, exist_ok=True)
-            for package in [path.parent, *path.parent.parents]:
-                if package == tmp_path:
-                    break
-                (package / "__init__.py").touch()
-            path.write_text(textwrap.dedent(source))
-        importlib.invalidate_caches()
-        return name
-
-    yield make
-    for module in list(sys.modules):
-        if module.split(".")[0] in names:
-            del sys.modules[module]
 
 
 def module(name: str) -> Any:
@@ -241,10 +209,10 @@ async def test_scan_reports_every_problem_at_once_and_registers_nothing(
     assert kinds.count(NotARequest) == 1
     assert kinds.count(InvalidHandlerSignature) == 5
     messages = "\n".join(str(error) for error in errors)
-    assert "cannot resolve the type hints" in messages
+    assert "cannot resolve its type hints" in messages
     assert "has no type hint" in messages
     assert "must be hinted with one class" in messages
-    assert "takes no request parameter" in messages
+    assert "takes no positional request parameter" in messages
     assert "async def handle" in messages
     runtime_error = next(error for error in errors if isinstance(error, RuntimeError))
     assert f"{pkg}.broken" in "".join(runtime_error.__notes__)

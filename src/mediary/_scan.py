@@ -1,4 +1,4 @@
-"""Package scanning: import every module under some roots and collect `@handler` classes."""
+"""Package scanning: import every module under some roots and collect their `@handler`s."""
 
 import importlib
 import pkgutil
@@ -8,24 +8,22 @@ from types import ModuleType
 from ._handlers import is_handler
 
 
-def discover(roots: Iterable[str | ModuleType]) -> tuple[list[type], list[Exception]]:
+def discover(roots: Iterable[str | ModuleType]) -> tuple[list[object], list[Exception]]:
     """Import each root and all its submodules; return their handlers and any import errors.
+
+    Handlers are the `@handler` classes and functions defined at module level.
 
     A handler is collected from the module that defines it, so re-exports don't repeat it.
     Modules are visited in a stable order: each root, then its submodules sorted by name.
     """
     problems: list[Exception] = []
-    handlers: dict[type, None] = {}
+    handlers: dict[object, None] = {}
     seen: set[str] = set()
     for root in roots:
         name = root if isinstance(root, str) else root.__name__
         for module in _walk(name, seen, problems):
             for value in vars(module).values():
-                if (
-                    isinstance(value, type)
-                    and value.__module__ == module.__name__
-                    and is_handler(value)
-                ):
+                if is_handler(value) and getattr(value, "__module__", None) == module.__name__:
                     handlers[value] = None
     return list(handlers), problems
 

@@ -62,3 +62,12 @@ def test_register_rejects_a_handler_for_another_request() -> None:
 def test_handler_keeps_the_decorated_class_type() -> None:
     assert_type(handler(GetNameHandler), type[GetNameHandler])
     assert_type(handler(GetName)(GetNameHandler), type[GetNameHandler])
+
+
+async def get_name(request: GetName, other: Untyped) -> str:
+    return "ada"
+
+
+def test_register_accepts_matching_function_handlers() -> None:
+    Mediator().register(GetName, get_name)
+    Mediator().register(Delete, get_name)  # pyright: ignore[reportArgumentType]

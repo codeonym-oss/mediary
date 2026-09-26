@@ -10,7 +10,7 @@ from ._errors import (
     NotARequest,
     ScanError,
 )
-from ._handlers import Handler, handler
+from ._handlers import Handler, Resolver, handler
 from ._markers import Returns, request
 from ._mediator import Mediator
 
@@ -24,6 +24,7 @@ __all__ = [
     "MediaryError",
     "Mediator",
     "NotARequest",
+    "Resolver",
     "Returns",
     "ScanError",
     "__version__",
