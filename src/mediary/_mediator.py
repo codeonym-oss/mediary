@@ -81,16 +81,21 @@ class Mediator:
 
     def use(
         self,
-        behavior: type[Behavior[Any, Any]] | Callable[..., Awaitable[Any]],
+        behavior: type[Behavior[Any, Any]] | Behavior[Any, Any] | Callable[..., Awaitable[Any]],
         *,
         order: int | None = None,
         kinds: Iterable[str] | None = None,
     ) -> None:
         """Add a behavior that isn't found by `scan`, such as one from a library.
 
-        `order` and `kinds` override those given to its `@behavior(...)`, if any (see
-        `@behavior` for what they mean). Adding a behavior that is already present changes
-        nothing.
+        `behavior` is a behavior class (resolved for every call), a configured instance (used
+        as it is, e.g. `RetryBehavior(max_retries=5)`) or an async function. `order` and
+        `kinds` override those given to its `@behavior(...)`, if any (see `@behavior` for what
+        they mean). Adding a behavior that is already present changes nothing.
+
+        Example:
+            mediator.use(RetryBehavior(retry_on=(ConnectionError,)), kinds={"request"})
+
 
         Raises:
             InvalidBehaviorSignature: `behavior` has the wrong shape (see `@behavior`).
