@@ -57,6 +57,7 @@ select = [
 ignore = [
     "D100", "D104", "D105", "D107",  # module/package/magic/__init__ docstrings
     "D203", "D213",                  # pick D211 + D212 (summary on the first line)
+    "N818",                          # exceptions are named for what happened (HandlerNotFound), no Error suffix
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -71,6 +72,8 @@ allowed_prefixes = ["Merge", "Revert", "fixup!", "squash!"]
 include = ["src", "tests", "scripts"]
 pythonVersion = "3.11"
 typeCheckingMode = "strict"
+# Every `pyright: ignore` must still be needed, so tests can assert that an error is reported.
+reportUnnecessaryTypeIgnoreComment = "error"
 
 [tool.pytest.ini_options]
 addopts = ["--strict-markers", "--strict-config", "-ra", "--cov", "--cov-report=term-missing"]
