@@ -1,10 +1,11 @@
 """The mediator: routes requests and streams to their one handler, notifications to all theirs."""
 
+import copy
 from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Iterable
 from dataclasses import dataclass, field
 from functools import partial
 from types import ModuleType
-from typing import Any, Concatenate, TypeVar, overload
+from typing import Any, Concatenate, Self, TypeVar, overload
 
 from ._behaviors import Behavior, BehaviorBinding, StreamBehavior, bind_behavior, pipeline
 from ._errors import (
@@ -18,7 +19,15 @@ from ._errors import (
     ScanError,
 )
 from ._handlers import Binding, Handler, StreamHandler, bind
-from ._markers import HandlerInfo, Returns, Yields, is_notification, kind_of, marker_of
+from ._markers import (
+    HandlerInfo,
+    Lifetime,
+    Returns,
+    Yields,
+    is_notification,
+    kind_of,
+    marker_of,
+)
 from ._publishing import PublishStrategy, Sequential
 from ._resolving import DefaultResolver, Resolver
 from ._scan import discover
@@ -61,6 +70,29 @@ class Mediator:
         self._subscribers: dict[type, dict[object, Binding]] = {}
         self._behaviors: dict[object, BehaviorBinding] = {}
         self._pipelines: dict[type, tuple[BehaviorBinding, ...]] = {}
+
+    @property
+    def resolver(self) -> Resolver:
+        """The resolver this mediator gets handler and behavior instances from."""
+        return self._resolver
+
+    def with_resolver(self, resolver: Resolver) -> Self:
+        """Return a view of this mediator that resolves through `resolver` instead.
+
+        The view shares everything else with this mediator, both ways and for good: its
+        handlers, behaviors and publish strategy, and singleton handler instances. It is cheap
+        to make, so make one per unit of work, such as per web request, with a resolver bound
+        to that work's DI scope.
+
+        Example:
+            async with container() as request_container:
+                scoped = mediator.with_resolver(ContainerResolver(request_container))
+                await scoped.send(PlaceOrder("book", 1))
+
+        """
+        view = copy.copy(self)
+        view._resolver = resolver
+        return view
 
     def register(
         self,
@@ -298,3 +330,22 @@ class Mediator:
 
 def _qualified_name(obj: object) -> str:
     return f"{getattr(obj, '__module__', '')}.{getattr(obj, '__qualname__', '')}"
+
+
+def registered_classes(mediator: Mediator) -> list[tuple[type, Lifetime]]:
+    """Return the handler and behavior classes `mediator` resolves, with their lifetimes.
+
+    Function handlers and behavior instances aren't resolved, so they aren't included.
+    """
+    # Reads the registrations of a mediator it doesn't own, hence the ignores.
+    handlers = [*mediator._bindings.values()]  # pyright: ignore[reportPrivateUsage]
+    for subscribers in mediator._subscribers.values():  # pyright: ignore[reportPrivateUsage]
+        handlers.extend(subscribers.values())
+    sources = [b.source for b in handlers]
+    sources += [b.source for b in mediator._behaviors.values()]  # pyright: ignore[reportPrivateUsage]
+    classes: dict[type, Lifetime] = {}
+    for source in sources:
+        if isinstance(source, type):
+            marker = marker_of(source)
+            classes.setdefault(source, marker.lifetime if marker is not None else "transient")
+    return list(classes.items())

@@ -10,11 +10,12 @@ requires-python = ">=3.11"
 dependencies = []
 keywords = [
     "mediator", "cqrs", "asyncio", "pipeline", "middleware", "command", "query", "notification",
-    "dependency-injection",
+    "dependency-injection", "dishka", "fastapi",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Framework :: AsyncIO",
+    "Framework :: FastAPI",
     "Framework :: Pytest",
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
@@ -37,19 +38,31 @@ Changelog = "https://github.com/codeonym-oss/mediary/blob/main/CHANGELOG.md"
 [project.entry-points.pytest11]
 mediary = "mediary.pytest_plugin"
 
+[project.optional-dependencies]
+dishka = ["dishka>=1.6"]
+fastapi = ["fastapi>=0.115"]
+full = ["mediary[dishka,fastapi]"]
+
 [build-system]
 requires = ["uv_build>=0.8.22,<0.13"]
 build-backend = "uv_build"
 
 [dependency-groups]
-dev = [
-    "commitizen>=4.8",
-    "pre-commit>=4.3",
-    "pyright[nodejs]>=1.1.400",
+# What the tests need; CI runs them with only it and one extra, to test each extra alone.
+test = [
+    "httpx2",
     "pytest>=9",
     "pytest-asyncio>=1.2",
     "pytest-cov>=7",
+]
+dev = [
+    {include-group = "test"},
+    "commitizen>=4.8",
+    "pre-commit>=4.3",
+    "pyright[nodejs]>=1.1.400",
     "ruff>=0.16",
+    # Every extra, so pyright and the full test run see all of mediary.
+    "mediary[full]",
 ]
 
 [tool.ruff]
