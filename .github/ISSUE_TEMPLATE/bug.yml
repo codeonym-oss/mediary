@@ -1,0 +1,38 @@
+name: Bug report
+description: Something in mediary doesn't work as documented.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: The smallest code that shows the problem.
+      render: python
+    validations:
+      required: true
+  - type: textarea
+    id: traceback
+    attributes:
+      label: Traceback or output
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: mediary version
+      placeholder: python -c "import mediary; print(mediary.__version__)"
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python version and OS
+      placeholder: 3.13.2 on Ubuntu 24.04
+    validations:
+      required: true
