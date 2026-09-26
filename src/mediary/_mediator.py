@@ -1,31 +1,16 @@
 """The mediator: routes each request to its one handler."""
 
-import inspect
-from typing import Any, Protocol, TypeVar, overload
+from collections.abc import Mapping
+from types import ModuleType
+from typing import Any, TypeVar, overload
 
-from ._errors import DuplicateHandler, HandlerNotFound, InvalidHandlerSignature, NotARequest
-from ._markers import Returns, marker_of
+from ._errors import DuplicateHandler, HandlerNotFound, MediaryError, NotARequest, ScanError
+from ._handlers import Handler, bound_request, check_handle
+from ._markers import Returns, is_request
+from ._scan import discover
 
 _Req = TypeVar("_Req")
-_Req_contra = TypeVar("_Req_contra", contravariant=True)
-_Res_co = TypeVar("_Res_co", covariant=True)
 _R = TypeVar("_R")
-
-
-class Handler(Protocol[_Req_contra, _Res_co]):
-    """The shape of a request handler: any class with an async `handle` taking the request.
-
-    No base class is needed; type checkers match handlers structurally.
-
-    Example:
-        class GetUserHandler:
-            async def handle(self, request: GetUser) -> User: ...
-
-    """
-
-    async def handle(self, request: _Req_contra, /) -> _Res_co:
-        """Handle `request` and return its result."""
-        ...
 
 
 class Mediator:
@@ -40,22 +25,54 @@ class Mediator:
     def register(self, request_type: type[_Req], handler: type[Handler[_Req, Any]]) -> None:
         """Register `handler` as the handler of `request_type`.
 
-        A new handler instance is created for every `send`.
+        A new handler instance is created for every `send`. Registering the same handler for
+        the same request again changes nothing.
 
         Raises:
             NotARequest: `request_type` isn't decorated with `@request`.
             InvalidHandlerSignature: `handler` has no async `handle` method.
-            DuplicateHandler: `request_type` already has a handler.
+            DuplicateHandler: `request_type` already has another handler.
 
         """
-        if marker_of(request_type) is None:
-            raise NotARequest(request_type)
-        if not inspect.iscoroutinefunction(getattr(handler, "handle", None)):
-            raise InvalidHandlerSignature(handler, "it needs an `async def handle(self, request)`")
-        existing = self._handlers.get(request_type)
-        if existing is not None:
-            raise DuplicateHandler(request_type, existing, handler)
+        self._check(request_type, handler, {})
         self._handlers[request_type] = handler
+
+    def scan(self, *packages: str | ModuleType) -> None:
+        """Import `packages` and all their submodules, and register every `@handler` in them.
+
+        Each handler serves the request named by `@handler(...)` or by the type hint of its
+        `handle` method's request parameter. Scanning is all or nothing: every problem found is
+        reported together, and if there is any, no handler from this scan is registered.
+        Scanning a package again registers nothing new.
+
+        Raises:
+            ScanError: a module failed to import, or a handler couldn't be registered (see
+                `register` for the reasons, plus unresolvable request hints).
+
+        """
+        handlers, problems = discover(packages)
+        staged: dict[type, type[Handler[Any, Any]]] = {}
+        for handler in handlers:
+            try:
+                request_type = bound_request(handler)
+                self._check(request_type, handler, staged)
+            except MediaryError as exc:
+                problems.append(exc)
+            else:
+                staged[request_type] = handler
+        if problems:
+            raise ScanError(problems)
+        self._handlers.update(staged)
+
+    def _check(
+        self, request_type: type, handler: type, staged: Mapping[type, type[Handler[Any, Any]]]
+    ) -> None:
+        if not is_request(request_type):
+            raise NotARequest(request_type)
+        check_handle(handler)
+        existing = staged.get(request_type) or self._handlers.get(request_type)
+        if existing is not None and existing is not handler:
+            raise DuplicateHandler(request_type, existing, handler)
 
     @overload
     async def send(self, request: Returns[_R], /) -> _R: ...

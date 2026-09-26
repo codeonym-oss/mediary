@@ -8,7 +8,7 @@ Type-level tests: pyright (strict) checks this file in CI.
 from dataclasses import dataclass
 from typing import Any, assert_type
 
-from mediary import Mediator, Returns, request
+from mediary import Mediator, Returns, handler, request
 
 
 @request
@@ -57,3 +57,8 @@ async def test_send_is_typed_from_returns() -> None:
 def test_register_rejects_a_handler_for_another_request() -> None:
     # Registration doesn't inspect hints at runtime, so only the static error is under test.
     Mediator().register(GetName, DeleteHandler)  # pyright: ignore[reportArgumentType]
+
+
+def test_handler_keeps_the_decorated_class_type() -> None:
+    assert_type(handler(GetNameHandler), type[GetNameHandler])
+    assert_type(handler(GetName)(GetNameHandler), type[GetNameHandler])

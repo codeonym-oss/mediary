@@ -1,5 +1,7 @@
 """The exceptions mediary raises. All of them derive from `MediaryError`."""
 
+from collections.abc import Sequence
+
 
 def _name(cls: type) -> str:
     return f"{cls.__module__}.{cls.__qualname__}"
@@ -50,3 +52,15 @@ class InvalidHandlerSignature(MediaryError, TypeError):
     def __init__(self, handler: type, reason: str) -> None:
         self.handler = handler
         super().__init__(f"Invalid handler {_name(handler)}: {reason}")
+
+
+class ScanError(MediaryError):
+    """`Mediator.scan` found problems; `errors` holds every one of them.
+
+    Nothing from the failed scan is registered.
+    """
+
+    def __init__(self, errors: Sequence[Exception]) -> None:
+        self.errors = tuple(errors)
+        lines = "".join(f"\n  - {type(error).__name__}: {error}" for error in self.errors)
+        super().__init__(f"scan found {len(self.errors)} problem(s):{lines}")
