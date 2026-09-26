@@ -8,7 +8,7 @@ pytest.importorskip("dishka")
 
 from dishka import Provider, Scope, make_async_container, make_container
 
-from mediary import Mediator, Next, Returns, handler, request
+from mediary import Mediator, Next, Returns, handler, notification, request
 from mediary.cqrs import CommandSender, QuerySender
 from mediary.ext.dishka import DishkaResolver, MediaryProvider
 from mediary.testing import RecordingMediator
@@ -153,6 +153,29 @@ async def test_behavior_classes_are_resolved_by_dishka() -> None:
     container = make_async_container(AppProvider(), MediaryProvider(mediator))
     async with container() as scope:
         assert await (await scope.get(Mediator)).send(SessionOf()) is Session.opened[0]
+    await container.close()
+
+
+async def test_notification_handler_classes_are_resolved_by_dishka() -> None:
+    @notification
+    class Ordered:
+        pass
+
+    class Audit:
+        sessions: list[Session] = []  # noqa: RUF012
+
+        def __init__(self, session: Session) -> None:
+            self.session = session
+
+        async def handle(self, event: Ordered) -> None:
+            Audit.sessions.append(self.session)
+
+    mediator, _ = mediary()
+    mediator.register(Ordered, Audit)
+    container = make_async_container(AppProvider(), MediaryProvider(mediator))
+    async with container() as scope:
+        await (await scope.get(Mediator)).publish(Ordered())
+    assert Audit.sessions == Session.opened
     await container.close()
 
 
