@@ -1,15 +1,14 @@
 """Handlers: their shape, the `@handler` decorator, and binding one to its request."""
 
 import inspect
-import typing
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any, Protocol, TypeVar, get_args, overload
 
 from ._errors import InvalidHandlerSignature
 from ._markers import Lifetime, Marker, mark, marker_of
+from ._resolving import Resolver, Shape, require_async, resolve, shape
 
-_T = TypeVar("_T")
 _Req_contra = TypeVar("_Req_contra", contravariant=True)
 _Res_co = TypeVar("_Res_co", covariant=True)
 
@@ -30,43 +29,6 @@ class Handler(Protocol[_Req_contra, _Res_co]):
     async def handle(self, request: _Req_contra, /) -> _Res_co:
         """Handle `request` and return its result."""
         ...
-
-
-class Resolver(Protocol):
-    """Supplies handler instances and the dependencies of function handlers.
-
-    Plug a DI container in by adapting it to `resolve`, which may be sync or async. The
-    default resolver calls `cls()`.
-
-    Example:
-        class ContainerResolver:
-            def __init__(self, container: Container) -> None:
-                self.container = container
-
-            def resolve(self, cls: type[T]) -> T:
-                return self.container.get(cls)
-
-        mediator = Mediator(resolver=ContainerResolver(container))
-
-    """
-
-    def resolve(self, cls: type[_T], /) -> _T | Awaitable[_T]:
-        """Return an instance of `cls`."""
-        ...
-
-
-class DefaultResolver:
-    """Instantiates each type with no arguments."""
-
-    def resolve(self, cls: type[_T], /) -> _T:
-        """Return `cls()`."""
-        return cls()
-
-
-async def resolve(resolver: Resolver, cls: Any) -> Any:
-    """Resolve `cls` with `resolver`, awaiting the result if it is awaitable."""
-    instance = resolver.resolve(cls)
-    return await instance if inspect.isawaitable(instance) else instance
 
 
 _Handles = TypeVar("_Handles", bound=Handler[Any, Any])
@@ -121,12 +83,6 @@ def handler(target: Any = None, /, *, lifetime: Lifetime = "transient") -> Any:
     return decorate
 
 
-def is_handler(obj: object) -> bool:
-    """Whether `obj` itself is decorated with `@handler`."""
-    marker = marker_of(obj)
-    return marker is not None and marker.kind == "handler"
-
-
 Invoke = Callable[[Any, Resolver], Awaitable[Any]]
 
 
@@ -157,54 +113,34 @@ def bind(source: Any, request_type: type | None = None) -> Binding:
         request_type = marker.target
     lifetime = marker.lifetime if marker is not None else "transient"
     if isinstance(source, type):
-        handle = _async(
-            source, getattr(source, "handle", None), "an `async def handle(self, request)`"
+        handle = require_async(
+            source,
+            getattr(source, "handle", None),
+            "an `async def handle(self, request)`",
+            InvalidHandlerSignature,
         )
-        params, hints = _signature(source, handle, skip_self=True)
-        if request_type is None:
-            request_type = _request_hint(source, params, hints)
-        return Binding(request_type, source, _class_invoker(source, lifetime))
-    function = _async(source, source, "to be an `async def` function or a class")
-    if lifetime != "transient":
-        raise InvalidHandlerSignature(source, "only class handlers have a lifetime")
-    params, hints = _signature(source, function, skip_self=False)
+        params = shape(
+            source, handle, leading=("request",), method=True, error=InvalidHandlerSignature
+        )
+        invoke = _class_invoker(source, lifetime)
+    else:
+        function = require_async(
+            source, source, "to be an `async def` function or a class", InvalidHandlerSignature
+        )
+        if lifetime != "transient":
+            raise InvalidHandlerSignature(source, "only class handlers have a lifetime")
+        params = shape(
+            source, function, leading=("request",), method=False, error=InvalidHandlerSignature
+        )
+        invoke = _function_invoker(function, params)
     if request_type is None:
-        request_type = _request_hint(source, params, hints)
-    return Binding(request_type, source, _function_invoker(source, params, hints))
+        request_type = _request_hint(source, params)
+    return Binding(request_type, source, invoke)
 
 
-def _async(source: Any, fn: Any, needs: str) -> Callable[..., Awaitable[Any]]:
-    if not inspect.iscoroutinefunction(fn):
-        raise InvalidHandlerSignature(source, f"it needs {needs}")
-    return fn
-
-
-def _signature(
-    source: Any, fn: Callable[..., Any], *, skip_self: bool
-) -> tuple[list[inspect.Parameter], dict[str, Any]]:
-    params = list(inspect.signature(fn).parameters.values())[1 if skip_self else 0 :]
-    if not params or params[0].kind not in (
-        inspect.Parameter.POSITIONAL_ONLY,
-        inspect.Parameter.POSITIONAL_OR_KEYWORD,
-    ):
-        raise InvalidHandlerSignature(source, "it takes no positional request parameter")
-    for param in params[1:]:
-        if param.kind in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD):
-            raise InvalidHandlerSignature(
-                source, f"dependencies are resolved one by one, so `{param}` isn't allowed"
-            )
-    try:
-        hints = typing.get_type_hints(fn)
-    except Exception as exc:
-        raise InvalidHandlerSignature(
-            source, f"cannot resolve its type hints ({type(exc).__name__}: {exc})"
-        ) from exc
-    return params, hints
-
-
-def _request_hint(source: Any, params: list[inspect.Parameter], hints: dict[str, Any]) -> type:
-    name = params[0].name
-    hint = hints.get(name)
+def _request_hint(source: Any, params: Shape) -> type:
+    hint = params.hint(0)
+    name = params.leading[0].name
     if hint is None:
         raise InvalidHandlerSignature(
             source,
@@ -238,24 +174,9 @@ def _class_invoker(cls: type, lifetime: Lifetime) -> Invoke:
     return invoke_singleton
 
 
-def _function_invoker(
-    fn: Callable[..., Awaitable[Any]], params: list[inspect.Parameter], hints: dict[str, Any]
-) -> Invoke:
-    positional: list[Any] = []
-    keyword: dict[str, Any] = {}
-    for param in params[1:]:
-        if param.name not in hints:
-            raise InvalidHandlerSignature(
-                fn, f"the dependency `{param.name}` needs a type hint so it can be resolved"
-            )
-        if param.kind is inspect.Parameter.POSITIONAL_ONLY:
-            positional.append(hints[param.name])
-        else:
-            keyword[param.name] = hints[param.name]
-
+def _function_invoker(fn: Callable[..., Awaitable[Any]], params: Shape) -> Invoke:
     async def invoke(request: Any, resolver: Resolver) -> Any:
-        args = [await resolve(resolver, hint) for hint in positional]
-        kwargs = {name: await resolve(resolver, hint) for name, hint in keyword.items()}
+        args, kwargs = await params.dependencies(resolver)
         return await fn(request, *args, **kwargs)
 
     return invoke

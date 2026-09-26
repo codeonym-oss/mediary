@@ -212,7 +212,7 @@ async def test_scan_reports_every_problem_at_once_and_registers_nothing(
     assert "cannot resolve its type hints" in messages
     assert "has no type hint" in messages
     assert "must be hinted with one class" in messages
-    assert "takes no positional request parameter" in messages
+    assert "must take positional parameters (request)" in messages
     assert "async def handle" in messages
     runtime_error = next(error for error in errors if isinstance(error, RuntimeError))
     assert f"{pkg}.broken" in "".join(runtime_error.__notes__)

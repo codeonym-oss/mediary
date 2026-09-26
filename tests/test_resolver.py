@@ -215,8 +215,8 @@ async def _singleton_function(request: Greet) -> str:
 
 INVALID_FUNCTIONS: list[tuple[Callable[..., Any], str]] = [
     (_sync, "`async def` function"),
-    (_no_params, "no positional request parameter"),
-    (_keyword_request, "no positional request parameter"),
+    (_no_params, "must take positional parameters \\(request\\)"),
+    (_keyword_request, "must take positional parameters \\(request\\)"),
     (_var_args, "resolved one by one"),
     (_unhinted_dependency, "`greeter` needs a type hint"),
     (_singleton_function, "only class handlers have a lifetime"),

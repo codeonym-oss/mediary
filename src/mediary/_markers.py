@@ -36,12 +36,15 @@ class Marker:
     """What a decorator recorded about a class or function.
 
     `target` is the request type an `@handler(SomeRequest)` names explicitly, and `lifetime`
-    how long a class handler's instance lives.
+    how long a class handler's instance lives. `order` and `kinds` are a behavior's place in
+    the pipeline and the request kinds it wraps (None for all).
     """
 
     kind: str
     target: type | None = None
     lifetime: Lifetime = "transient"
+    order: int = 0
+    kinds: frozenset[str] | None = None
 
 
 def request(cls: _C) -> _C:

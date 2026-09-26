@@ -6,9 +6,11 @@ Type-level tests: pyright (strict) checks this file in CI.
 """
 
 from dataclasses import dataclass
-from typing import Any, assert_type
+from typing import Any, TypeVar, assert_type
 
-from mediary import Mediator, Returns, handler, request
+from mediary import Mediator, Next, Returns, behavior, handler, request
+
+T = TypeVar("T")
 
 
 @request
@@ -71,3 +73,18 @@ async def get_name(request: GetName, other: Untyped) -> str:
 def test_register_accepts_matching_function_handlers() -> None:
     Mediator().register(GetName, get_name)
     Mediator().register(Delete, get_name)  # pyright: ignore[reportArgumentType]
+
+
+class Passthrough:
+    async def handle(self, request: object, next: Next[T]) -> T:
+        return await next()
+
+
+async def passthrough(request: object, next: Next[T]) -> T:
+    return await next()
+
+
+def test_behavior_keeps_the_decorated_type() -> None:
+    assert_type(behavior(Passthrough), type[Passthrough])
+    assert_type(behavior(order=1)(Passthrough), type[Passthrough])
+    Mediator().use(behavior(passthrough))
