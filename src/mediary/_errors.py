@@ -36,13 +36,24 @@ class DuplicateHandler(MediaryError, ValueError):
 
 
 class NotARequest(MediaryError, TypeError):
-    """A handler was registered for a class that isn't decorated as a request."""
+    """A handler was registered for a class that is neither a request nor a notification."""
 
     def __init__(self, cls: type) -> None:
         self.cls = cls
         super().__init__(
-            f"{_name(cls)} is not a request. Decorate it with @request "
-            "(subclasses of a request must be decorated too)."
+            f"{_name(cls)} is not a request. Decorate it with @request, or with @notification "
+            "if it can have many handlers (subclasses must be decorated too)."
+        )
+
+
+class NotANotification(MediaryError, TypeError):
+    """An object whose class isn't decorated with `@notification` was published."""
+
+    def __init__(self, cls: type) -> None:
+        self.cls = cls
+        super().__init__(
+            f"{_name(cls)} is not a notification. Decorate it with @notification, or send it "
+            "with `send` if it is a request."
         )
 
 

@@ -1,14 +1,23 @@
-"""The mediator: routes each request through its pipeline to its one handler."""
+"""The mediator: routes requests to their one handler and notifications to all of theirs."""
 
-from collections.abc import Awaitable, Callable, Iterable, Mapping
+from collections.abc import Awaitable, Callable, Iterable
+from dataclasses import dataclass, field
 from functools import partial
 from types import ModuleType
 from typing import Any, Concatenate, TypeVar, overload
 
 from ._behaviors import Behavior, BehaviorBinding, bind_behavior, pipeline
-from ._errors import DuplicateHandler, HandlerNotFound, MediaryError, NotARequest, ScanError
+from ._errors import (
+    DuplicateHandler,
+    HandlerNotFound,
+    MediaryError,
+    NotANotification,
+    NotARequest,
+    ScanError,
+)
 from ._handlers import Binding, Handler, bind
-from ._markers import Returns, is_request, marker_of
+from ._markers import Returns, is_notification, is_request, marker_of
+from ._publishing import PublishStrategy, Sequential
 from ._resolving import DefaultResolver, Resolver
 from ._scan import discover
 
@@ -18,17 +27,33 @@ _R = TypeVar("_R")
 _SCANNED_KINDS = frozenset({"handler", "behavior"})
 
 
+@dataclass
+class _Staged:
+    """Handlers being added: one per request type, any number per notification type."""
+
+    requests: dict[type, Binding] = field(default_factory=dict[type, Binding])
+    notifications: list[Binding] = field(default_factory=list[Binding])
+
+
 class Mediator:
-    """Dispatches requests through their behaviors to their handlers.
+    """Sends requests to their handler and publishes notifications to theirs, via behaviors.
 
     Each mediator has its own registrations; two mediators never share handlers or behaviors.
     Handler and behavior classes, and the dependencies of functions, come from `resolver`,
-    which defaults to calling each type with no arguments.
+    which defaults to calling each type with no arguments. `publish_strategy` runs the
+    handlers of a notification; it defaults to `Sequential()`.
     """
 
-    def __init__(self, *, resolver: Resolver | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        resolver: Resolver | None = None,
+        publish_strategy: PublishStrategy | None = None,
+    ) -> None:
         self._resolver: Resolver = resolver if resolver is not None else DefaultResolver()
+        self._strategy: PublishStrategy = publish_strategy or Sequential()
         self._bindings: dict[type, Binding] = {}
+        self._subscribers: dict[type, dict[object, Binding]] = {}
         self._behaviors: dict[object, BehaviorBinding] = {}
         self._pipelines: dict[type, tuple[BehaviorBinding, ...]] = {}
 
@@ -39,19 +64,20 @@ class Mediator:
     ) -> None:
         """Register `handler`, a handler class or async function, for `request_type`.
 
-        A class handler is resolved for every `send`, unless it is decorated with
-        `@handler(lifetime="singleton")`. Registering the same handler for the same request
+        `request_type` is a request, which has exactly one handler, or a notification, which
+        has any number. A class handler is resolved for every call, unless it is decorated
+        with `@handler(lifetime="singleton")`. Registering the same handler for the same type
         again changes nothing.
 
         Raises:
-            NotARequest: `request_type` isn't decorated with `@request`.
+            NotARequest: `request_type` isn't decorated with `@request` or `@notification`.
             InvalidHandlerSignature: `handler` has the wrong shape (see `@handler`).
-            DuplicateHandler: `request_type` already has another handler.
+            DuplicateHandler: the request `request_type` already has another handler.
 
         """
-        binding = bind(handler, request_type)
-        self._check(binding, {})
-        self._bindings.setdefault(request_type, binding)
+        staged = _Staged()
+        self._stage(bind(handler, request_type), staged)
+        self._commit(staged)
 
     def use(
         self,
@@ -86,32 +112,43 @@ class Mediator:
 
         """
         found, problems = discover(packages, _SCANNED_KINDS)
-        staged: dict[type, Binding] = {}
+        staged = _Staged()
         behaviors: list[BehaviorBinding] = []
         for obj in found:
             marker = marker_of(obj)
             try:
                 if marker is not None and marker.kind == "behavior":
                     behaviors.append(bind_behavior(obj))
-                    continue
-                binding = bind(obj)
-                self._check(binding, staged)
+                else:
+                    self._stage(bind(obj), staged)
             except MediaryError as exc:
                 problems.append(exc)
-            else:
-                staged.setdefault(binding.request_type, binding)
         if problems:
             raise ScanError(problems)
-        for request_type, binding in staged.items():
-            self._bindings.setdefault(request_type, binding)
+        self._commit(staged)
         self._add_behaviors(behaviors)
 
-    def _check(self, binding: Binding, staged: Mapping[type, Binding]) -> None:
-        if not is_request(binding.request_type):
-            raise NotARequest(binding.request_type)
-        existing = staged.get(binding.request_type) or self._bindings.get(binding.request_type)
+    def _stage(self, binding: Binding, staged: _Staged) -> None:
+        """Add `binding` to `staged`, or raise if it can't be registered."""
+        target = binding.request_type
+        if is_notification(target):
+            staged.notifications.append(binding)
+            return
+        if not is_request(target):
+            raise NotARequest(target)
+        existing = staged.requests.get(target) or self._bindings.get(target)
         if existing is not None and existing.source is not binding.source:
-            raise DuplicateHandler(binding.request_type, existing.source, binding.source)
+            raise DuplicateHandler(target, existing.source, binding.source)
+        staged.requests.setdefault(target, binding)
+
+    def _commit(self, staged: _Staged) -> None:
+        for request_type, binding in staged.requests.items():
+            self._bindings.setdefault(request_type, binding)
+        for binding in staged.notifications:
+            subscribers = self._subscribers.setdefault(binding.request_type, {})
+            subscribers.setdefault(binding.source, binding)
+            ordered = sorted(subscribers.values(), key=lambda b: _qualified_name(b.source))
+            self._subscribers[binding.request_type] = {b.source: b for b in ordered}
 
     def _add_behaviors(self, behaviors: Iterable[BehaviorBinding]) -> None:
         for binding in behaviors:
@@ -131,20 +168,53 @@ class Mediator:
             HandlerNotFound: no handler is registered for exactly `type(request)`.
 
         """
-        request_type = type(request)
-        binding = self._bindings.get(request_type)
+        binding = self._bindings.get(type(request))
         if binding is None:
-            raise HandlerNotFound(request_type)
-        behaviors = self._pipelines.get(request_type)
+            raise HandlerNotFound(type(request))
+        return await self._through_pipeline(
+            request, partial(binding.invoke, request, self._resolver)
+        )
+
+    async def publish(
+        self, notification: object, /, *, strategy: PublishStrategy | None = None
+    ) -> None:
+        """Publish `notification` through its behaviors to all of its handlers.
+
+        The handlers, ordered by fully qualified name, are run by `strategy`, or else by the
+        mediator's publish strategy. Publishing a notification that has no handlers does
+        nothing (its behaviors still run).
+
+        Raises:
+            NotANotification: `type(notification)` isn't decorated with `@notification`.
+
+        """
+        notification_type = type(notification)
+        if not is_notification(notification_type):
+            raise NotANotification(notification_type)
+        subscribers = self._subscribers.get(notification_type, {}).values()
+        handlers = [partial(b.invoke, notification, self._resolver) for b in subscribers]
+        run = partial((strategy or self._strategy).publish, handlers)
+        await self._through_pipeline(notification, run)
+
+    async def _through_pipeline(
+        self, message: object, terminal: Callable[[], Awaitable[Any]]
+    ) -> Any:
+        """Run the behaviors that wrap `type(message)` around `terminal`."""
+        message_type = type(message)
+        behaviors = self._pipelines.get(message_type)
         if behaviors is None:
-            behaviors = self._pipelines[request_type] = pipeline(
-                self._behaviors.values(), request_type
+            behaviors = self._pipelines[message_type] = pipeline(
+                self._behaviors.values(), message_type
             )
         resolver = self._resolver
 
         async def call(index: int) -> Any:
             if index == len(behaviors):
-                return await binding.invoke(request, resolver)
-            return await behaviors[index].invoke(request, partial(call, index + 1), resolver)
+                return await terminal()
+            return await behaviors[index].invoke(message, partial(call, index + 1), resolver)
 
         return await call(0)
+
+
+def _qualified_name(obj: object) -> str:
+    return f"{getattr(obj, '__module__', '')}.{getattr(obj, '__qualname__', '')}"
