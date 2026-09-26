@@ -1,0 +1,59 @@
+"""
+Type-level tests: pyright (strict) checks this file in CI.
+
+`assert_type` fails type checking if the inferred type differs; each
+`pyright: ignore[...]` asserts an error IS reported (unused ignores are errors).
+"""
+
+from dataclasses import dataclass
+from typing import Any, assert_type
+
+from mediary import Mediator, Returns, request
+
+
+@request
+@dataclass
+class GetName(Returns[str]):
+    user_id: int
+
+
+@request
+@dataclass
+class Delete(Returns[None]):
+    user_id: int
+
+
+@request
+class Untyped:
+    pass
+
+
+class GetNameHandler:
+    async def handle(self, request: GetName) -> str:
+        return "ada"
+
+
+class DeleteHandler:
+    async def handle(self, request: Delete) -> None:
+        return None
+
+
+class UntypedHandler:
+    async def handle(self, request: Untyped) -> int:
+        return 1
+
+
+async def test_send_is_typed_from_returns() -> None:
+    m = Mediator()
+    m.register(GetName, GetNameHandler)
+    m.register(Delete, DeleteHandler)
+    m.register(Untyped, UntypedHandler)
+
+    assert_type(await m.send(GetName(1)), str)
+    assert_type(await m.send(Delete(1)), None)
+    assert_type(await m.send(Untyped()), Any)
+
+
+def test_register_rejects_a_handler_for_another_request() -> None:
+    # Registration doesn't inspect hints at runtime, so only the static error is under test.
+    Mediator().register(GetName, DeleteHandler)  # pyright: ignore[reportArgumentType]
