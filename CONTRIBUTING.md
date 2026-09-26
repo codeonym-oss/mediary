@@ -104,6 +104,19 @@ Fixes #5
 
 Keep a PR to one issue. Fill in the PR template's checklist.
 
+## Documentation
+
+The docs site is built with [MkDocs Material](https://squidfunk.github.io/mkdocs-material/) from
+`docs/`, and its API reference from the docstrings (Google style; fence examples as
+```` ```python ````). Preview it with `uv run mkdocs serve`; CI builds it with `--strict`, so
+broken links and references fail.
+
+Every Python example in `docs/` and the README runs in the test suite, page by page
+(`tests/test_examples.py` explains the conventions), so keep them runnable.
+
+Each push to `main` publishes the `dev` docs; each release publishes its `X.Y` version as
+`latest`. Versions are kept on the `gh-pages` branch by [mike](https://github.com/jimporter/mike).
+
 ## Releases
 
 Releases are automated with [release-please](https://github.com/googleapis/release-please). Merges

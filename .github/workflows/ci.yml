@@ -75,10 +75,23 @@ jobs:
   build-check:
     uses: ./.github/workflows/build.yml
 
+  # Strict: broken links, references and docstrings fail. The release workflow deploys it.
+  docs:
+    runs-on: ubuntu-latest
+    env:
+      NO_MKDOCS_2_WARNING: "1"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+      - run: uv sync --frozen --no-default-groups --group docs
+      - run: uv run --frozen --no-sync mkdocs build --strict
+
   # Single stable check name for the branch ruleset, independent of the matrix.
   ci-ok:
     if: always()
-    needs: [lint, typecheck, test, extras, build-check]
+    needs: [lint, typecheck, test, extras, build-check, docs]
     runs-on: ubuntu-latest
     steps:
       - name: All CI jobs passed

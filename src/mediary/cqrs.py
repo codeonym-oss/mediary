@@ -8,6 +8,7 @@ The pack is built only on the public `mediary.kinds` API. Give each piece of cod
 narrowest sender it needs, so that, for instance, a read-only view can't send a command.
 
 Example:
+    ```python
     @query
     @dataclass
     class GetUser(Query[User]):
@@ -17,6 +18,7 @@ Example:
         return await users.send(GetUser(user_id))
 
     await show(mediator, 1)  # a Mediator is both a QuerySender and a CommandSender
+    ```
 
 """
 

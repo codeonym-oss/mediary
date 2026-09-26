@@ -29,6 +29,7 @@ class Behavior(Protocol[_Req_contra, _R]):
     times (zero to short-circuit, more to retry) and may change the result.
 
     Example:
+        ```python
         class Timing:
             async def handle(self, request: object, next: Next[T]) -> T:
                 started = time.perf_counter()
@@ -36,6 +37,7 @@ class Behavior(Protocol[_Req_contra, _R]):
                     return await next()
                 finally:
                     log(type(request), time.perf_counter() - started)
+        ```
 
     """
 
@@ -52,6 +54,7 @@ class StreamBehavior(Protocol[_Req_contra, _R]):
     Iterators it gets from `next()` are closed when it is, even if it doesn't close them.
 
     Example:
+        ```python
         class Counting:
             async def handle(self, request: object, next: NextStream[T]) -> AsyncIterator[T]:
                 count = 0
@@ -59,6 +62,7 @@ class StreamBehavior(Protocol[_Req_contra, _R]):
                     count += 1
                     yield item
                 log(type(request), count)
+        ```
 
     """
 
@@ -98,12 +102,14 @@ def behavior(target: Any = None, /, *, order: int = 0, kinds: Iterable[str] | No
     A function behavior's parameters after `next` are resolved by their type hints.
 
     Example:
+        ```python
         @behavior(order=-10)
         class Logging:
             async def handle(self, request: object, next: Next[T]) -> T: ...
 
         @behavior(kinds={"request"})
         async def in_transaction(request: object, next: Next[T], db: Database) -> T: ...
+        ```
 
     Raises:
         TypeError: `kinds` is a single string rather than a collection of them.

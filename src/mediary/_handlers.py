@@ -21,8 +21,10 @@ class Handler(Protocol[_Req_contra, _Res_co]):
     No base class is needed; type checkers match handlers structurally.
 
     Example:
+        ```python
         class GetUserHandler:
             async def handle(self, request: GetUser) -> User: ...
+        ```
 
     """
 
@@ -35,10 +37,12 @@ class StreamHandler(Protocol[_Req_contra, _Res_co]):
     """The shape of a class handler for a stream request: `handle` is an async generator.
 
     Example:
+        ```python
         class ExportOrdersHandler:
             async def handle(self, request: ExportOrders) -> AsyncIterator[Order]:
                 async for order in self.repo.since(request.since):
                     yield order
+        ```
 
     """
 
@@ -76,6 +80,7 @@ def handler(target: Any = None, /, *, lifetime: Lifetime = "transient") -> Any:
     an async generator (a function, or a class's `handle`) that yields its items.
 
     Example:
+        ```python
         @handler
         class GetUserHandler:
             async def handle(self, request: GetUser) -> User: ...
@@ -89,6 +94,7 @@ def handler(target: Any = None, /, *, lifetime: Lifetime = "transient") -> Any:
         @handler
         async def export_orders(request: ExportOrders) -> AsyncIterator[Order]:
             yield ...
+        ```
 
     Raises:
         ValueError: `lifetime` is not "transient" or "singleton".

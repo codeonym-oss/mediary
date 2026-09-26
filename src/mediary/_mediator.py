@@ -85,9 +85,11 @@ class Mediator:
         to that work's DI scope.
 
         Example:
+            ```python
             async with container() as request_container:
                 scoped = mediator.with_resolver(ContainerResolver(request_container))
                 await scoped.send(PlaceOrder("book", 1))
+            ```
 
         """
         view = copy.copy(self)
@@ -142,8 +144,9 @@ class Mediator:
         they mean). Adding a behavior that is already present changes nothing.
 
         Example:
+            ```python
             mediator.use(RetryBehavior(retry_on=(ConnectionError,)), kinds={"request"})
-
+            ```
 
         Raises:
             InvalidBehaviorSignature: `behavior` has the wrong shape (see `@behavior`).
@@ -274,9 +277,11 @@ class Mediator:
         from the request's `Yields[...]` base, or `Any` without one.
 
         Example:
+            ```python
             async with mediator.stream(ExportOrders(since)) as orders:
                 async for order in orders:
                     ...
+            ```
 
         Raises:
             HandlerNotFound: no handler is registered for exactly `type(request)`, as a

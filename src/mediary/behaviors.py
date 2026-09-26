@@ -2,9 +2,11 @@
 
 They are never scanned; add the ones you want, configured, with `Mediator.use`:
 
-    mediator.use(LoggingBehavior(), order=-100)
-    mediator.use(TimeoutBehavior(seconds=5), order=-50)
-    mediator.use(RetryBehavior(max_retries=3), kinds={"request"})
+```python
+mediator.use(LoggingBehavior(), order=-100)
+mediator.use(TimeoutBehavior(seconds=5), order=-50)
+mediator.use(RetryBehavior(max_retries=3), kinds={"request"})
+```
 
 They wrap every message they are added for, so narrow them with `kinds=` where it matters:
 retrying is only safe for handlers that can run twice.

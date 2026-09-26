@@ -6,6 +6,7 @@ dependencies from dishka, including request-scoped ones such as a database sessi
 dishka's FastAPI integration, endpoints take one as `mediator: FromDishka[Mediator]`.
 
 Example:
+    ```python
     mediator = Mediator()
     mediator.scan("app")  # before making the container, so it provides every handler
 
@@ -14,6 +15,7 @@ Example:
     async with container() as request_container:  # Scope.REQUEST
         scoped = await request_container.get(Mediator)
         await scoped.send(PlaceOrder("book", 1))
+    ```
 
 """
 

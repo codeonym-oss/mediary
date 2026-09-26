@@ -22,12 +22,14 @@ class Returns(Generic[_R_co]):
     inherit it still work, and `send` returns `Any` for them.
 
     Example:
+        ```python
         @request
         @dataclass
         class GetUser(Returns[User]):
             user_id: int
 
         user = await mediator.send(GetUser(1))  # typed as User
+        ```
 
     """
 
@@ -41,6 +43,7 @@ class Yields(Generic[_R_co]):
     work, and `stream` yields `Any` for them.
 
     Example:
+        ```python
         @stream_request
         @dataclass
         class ExportOrders(Yields[Order]):
@@ -49,6 +52,7 @@ class Yields(Generic[_R_co]):
         async with mediator.stream(ExportOrders(today)) as orders:
             async for order in orders:  # typed as Order
                 ...
+        ```
 
     """
 
@@ -141,6 +145,7 @@ def define_kind(name: str, *, dispatch: Dispatch, rules: Iterable[HandlerRule] =
     Kinds are global, like the classes they decorate, so define each one once, at import time.
 
     Example:
+        ```python
         def must_return(info: HandlerInfo) -> str | None:
             if info.returns is type(None):
                 return "it must return a result"
@@ -150,6 +155,7 @@ def define_kind(name: str, *, dispatch: Dispatch, rules: Iterable[HandlerRule] =
 
         @lookup
         class FindUser(Returns[User]): ...
+        ```
 
     Raises:
         ValueError: `name` is already defined or reserved, or `dispatch` is unknown.
