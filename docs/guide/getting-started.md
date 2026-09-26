@@ -6,7 +6,7 @@
 pip install mediary  # or: uv add mediary
 ```
 
-mediary needs Python 3.11 or later and has no dependencies. It runs on asyncio: handlers are `async`, and so are `send` and `publish`.
+mediary needs Python 3.11 or later and has no dependencies. Handlers are `async`, and so are `send` and `publish`. It runs on asyncio, or on trio with `mediary[anyio]` (see [AnyIO and trio](../integrations/anyio.md)).
 
 ## Requests and handlers
 

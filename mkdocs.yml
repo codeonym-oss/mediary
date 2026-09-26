@@ -21,6 +21,7 @@ nav:
   - Integrations:
       - dishka: integrations/dishka.md
       - FastAPI: integrations/fastapi.md
+      - AnyIO and trio: integrations/anyio.md
   - Recipes:
       - Validation: recipes/validation.md
       - Transactions: recipes/transactions.md

@@ -9,10 +9,10 @@ mediator.use(RetryBehavior(max_retries=3), kinds={"request"})
 ```
 
 They wrap every message they are added for, so narrow them with `kinds=` where it matters:
-retrying is only safe for handlers that can run twice.
+retrying is only safe for handlers that can run twice. They run on asyncio, or on trio and
+other event loops through AnyIO (`mediary[anyio]`).
 """
 
-import asyncio
 import logging
 import random
 import time
@@ -20,6 +20,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any, TypeVar
 
 from ._behaviors import Next
+from ._concurrency import Expired, sleep, within
 from ._errors import HandlerTimeout
 from ._markers import marker_of
 from ._retryable import is_retryable
@@ -122,7 +123,7 @@ class RetryBehavior:
         base_delay: float = 0.1,
         max_delay: float = 10.0,
         jitter: bool = True,
-        sleep: Callable[[float], Awaitable[object]] = asyncio.sleep,
+        sleep: Callable[[float], Awaitable[object]] = sleep,
         random: Callable[[], float] = random.random,
     ) -> None:
         """Configure what is retried, how often and how long to wait.
@@ -182,11 +183,7 @@ class TimeoutBehavior:
 
     async def handle(self, message: object, next: Next[_T]) -> _T:
         """Await `next()` within the time limit."""
-        deadline = asyncio.timeout(self.seconds)
         try:
-            async with deadline:
-                return await next()
-        except TimeoutError as exc:
-            if deadline.expired():
-                raise HandlerTimeout(type(message), self.seconds) from exc
-            raise
+            return await within(self.seconds, next)
+        except Expired as exc:
+            raise HandlerTimeout(type(message), self.seconds) from exc

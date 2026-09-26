@@ -15,6 +15,7 @@ import sys
 import types
 from pathlib import Path
 
+import anyio
 import pytest
 
 from mediary.testing import RecordingMediator
@@ -55,6 +56,8 @@ def write_files(page: Path, root: Path) -> list[str]:
     return scripts
 
 
+# The examples are written for asyncio (`python -m asyncio`), and define global kinds once.
+@pytest.mark.parametrize("anyio_backend", ["asyncio"])
 @pytest.mark.parametrize("page", PAGES, ids=lambda page: str(page.relative_to(ROOT)))
 async def test_the_examples_run(
     page: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -68,9 +71,10 @@ async def test_the_examples_run(
         for code in scripts:
             before = set(vars(module))
             compiled = compile(code, str(page), "exec", flags=ast.PyCF_ALLOW_TOP_LEVEL_AWAIT)
-            result = eval(compiled, vars(module))
-            if inspect.iscoroutine(result):
-                await result
+            if compiled.co_flags & inspect.CO_COROUTINE:
+                await eval(compiled, vars(module))
+            else:  # as in a script: outside the event loop, where it may start its own
+                await anyio.to_thread.run_sync(eval, compiled, vars(module))
             for name in sorted(set(vars(module)) - before):
                 if name.startswith("test_"):
                     await getattr(module, name)(RecordingMediator())

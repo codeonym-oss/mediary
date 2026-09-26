@@ -1,8 +1,8 @@
-import asyncio
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import Any, TypeVar
 
+import anyio
 import pytest
 from conftest import MakePackage
 
@@ -102,6 +102,7 @@ async def test_nothing_runs_until_the_stream_is_iterated() -> None:
     assert log == []
     assert await anext(stream) == 0
     assert log == ["count started"]
+    await stream.aclose()
 
 
 async def test_items_are_produced_as_they_are_asked_for() -> None:
@@ -216,12 +217,14 @@ def test_only_stream_requests_have_async_generator_handlers(
         Mediator().register(message, function)
 
 
+def _typed(info: HandlerInfo) -> str | None:
+    return None if info.returns is not Any else "hint what it yields"
+
+
+feed = define_kind("feed", dispatch="stream", rules=[_typed])
+
+
 async def test_custom_kinds_can_stream_and_have_rules() -> None:
-    def typed(info: HandlerInfo) -> str | None:
-        return None if info.returns is not Any else "hint what it yields"
-
-    feed = define_kind("feed", dispatch="stream", rules=[typed])
-
     @feed
     class Prices(Yields[float]):
         pass
@@ -461,14 +464,14 @@ async def test_cancelling_the_consumer_reaches_the_handler() -> None:
     class Ticks(Yields[int]):
         pass
 
-    started = asyncio.Event()
+    started = anyio.Event()
     cleaned: list[str] = []
 
     async def ticks(request: Ticks) -> AsyncIterator[int]:
         try:
             yield 0
             started.set()
-            await asyncio.Event().wait()
+            await anyio.sleep_forever()
             yield 1
         finally:
             cleaned.append("ticks")
@@ -481,9 +484,8 @@ async def test_cancelling_the_consumer_reaches_the_handler() -> None:
             async for _ in stream:
                 pass
 
-    task = asyncio.create_task(consume())
-    await started.wait()
-    task.cancel()
-    with pytest.raises(asyncio.CancelledError):
-        await task
+    async with anyio.create_task_group() as group:
+        group.start_soon(consume)
+        await started.wait()
+        group.cancel_scope.cancel()
     assert cleaned == ["ticks"]

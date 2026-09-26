@@ -48,7 +48,7 @@ Handlers run in order of their fully qualified names, so the order is the same o
 A **publish strategy** runs a notification's handlers. Two ship with mediary:
 
 - **`Sequential()`**, the default, runs them one after another. The first error stops the rest and propagates.
-- **`Concurrent()`** runs them all at once, in an `asyncio.TaskGroup`. Every handler runs to completion even when some fail; their errors are then raised together, in an `ExceptionGroup`.
+- **`Concurrent()`** runs them all at once, in a task group. Every handler runs to completion even when some fail; their errors are then raised together, in an `ExceptionGroup`.
 
 Choose one per mediator, or per publish:
 

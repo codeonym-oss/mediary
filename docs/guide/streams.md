@@ -54,7 +54,7 @@ async with mediator.stream(ExportOrders(1_000_000)) as orders:
 assert exported == [1, 2]
 ```
 
-Iterate inside `async with` (or call `await stream.aclose()`): leaving the block closes the handler at once, running its `finally` blocks and `async with` exits — releasing a database cursor, say. A plain `async for` works, but leaves closing to the garbage collector. Cancelling the consumer cancels the handler where it is waiting.
+Iterate inside `async with` (or call `await stream.aclose()`): leaving the block closes the handler at once, running its `finally` blocks and `async with` exits — releasing a database cursor, say. A plain `async for` works, but leaves closing to the garbage collector — which trio can't do, so under trio always use `async with`. Cancelling the consumer cancels the handler where it is waiting.
 
 The handler is looked up when you call `stream`: a request without one raises `HandlerNotFound` there, not on the first item.
 

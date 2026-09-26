@@ -55,7 +55,8 @@ jobs:
       - run: uv run --frozen pytest
 
   # The tests with no extra installed, then with each one alone: the tests of missing extras
-  # skip, and the core must not need any of them.
+  # skip, and the core must not need any of them. (AnyIO and trio are test tools, so every run
+  # has them: each async test runs under both asyncio and trio.)
   extras:
     name: extras (${{ matrix.extra }})
     runs-on: ubuntu-latest

@@ -1,8 +1,8 @@
-import asyncio
 import logging
 from dataclasses import dataclass
 from typing import Any, ClassVar
 
+import anyio
 import pytest
 
 from mediary import (
@@ -39,7 +39,7 @@ class Script:
     async def handle(self, request: Work) -> str:
         Script.calls += 1
         if Script.delay:
-            await asyncio.sleep(Script.delay)
+            await anyio.sleep(Script.delay)
         if Script.errors:
             raise Script.errors.pop(0)
         return "done"

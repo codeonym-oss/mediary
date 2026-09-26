@@ -83,7 +83,7 @@ def test_the_plugin_is_registered_through_its_entry_point() -> None:
 @pytest.fixture
 def project(pytester: pytest.Pytester) -> pytest.Pytester:
     """A fresh pytest project, which loads installed plugins through their entry points."""
-    pytester.makeini("[pytest]\nasyncio_default_fixture_loop_scope = function\n")
+    pytester.makeini("[pytest]\nanyio_mode = auto\n")
     return pytester
 
 

@@ -14,7 +14,7 @@ Typed, decorator-driven mediator + CQRS for Python — handlers, pipelines and n
 - **Notifications**, with sequential or concurrent publishing, and **streams** of items from async generators.
 - **CQRS pack.** `@command`, `@query`, `@event`, and senders that can only send one kind.
 - **Pluggable DI**, with ready-made **dishka** and **FastAPI** integrations as extras.
-- **Testing helpers** and a **pytest fixture**. Zero dependencies, asyncio only, Python 3.11+.
+- **Testing helpers** and a **pytest fixture**. Zero dependencies, Python 3.11+, on asyncio — or trio, with `mediary[anyio]`.
 
 **[Documentation](https://codeonym-oss.github.io/mediary/)**: guides, recipes and the API reference.
 
@@ -22,7 +22,8 @@ Typed, decorator-driven mediator + CQRS for Python — handlers, pipelines and n
 
 ```sh
 pip install mediary      # or: uv add mediary
-pip install mediary[full]  # with every integration (see Integrations)
+pip install mediary[anyio]  # to run on trio, through AnyIO
+pip install mediary[full]   # with every integration (see Integrations)
 ```
 
 ## Quickstart

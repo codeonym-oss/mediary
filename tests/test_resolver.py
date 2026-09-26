@@ -1,8 +1,9 @@
-import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any, TypeVar
 
+import anyio
+import anyio.lowlevel
 import pytest
 from conftest import MakePackage
 
@@ -76,7 +77,7 @@ async def test_a_custom_resolver_supplies_handler_instances() -> None:
 async def test_resolvers_can_be_async() -> None:
     class AsyncResolver:
         async def resolve(self, cls: type[T]) -> T:
-            await asyncio.sleep(0)
+            await anyio.lowlevel.checkpoint()
             return RecordingResolver("hey").resolve(cls)
 
     m = Mediator(resolver=AsyncResolver())
@@ -112,12 +113,14 @@ async def test_concurrent_first_sends_share_one_singleton() -> None:
 
     class SlowResolver:
         async def resolve(self, cls: type[T]) -> T:
-            await asyncio.sleep(0)
+            await anyio.lowlevel.checkpoint()
             return cls()
 
     m = Mediator(resolver=SlowResolver())
     m.register(Greet, Slow)
-    await asyncio.gather(*(m.send(Greet("x")) for _ in range(3)))
+    async with anyio.create_task_group() as group:
+        for _ in range(3):
+            group.start_soon(m.send, Greet("x"))
     assert len({id(instance) for instance in instances}) == 1
 
 
