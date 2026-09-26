@@ -13,10 +13,11 @@ from ._errors import (
     MediaryError,
     NotANotification,
     NotARequest,
+    RuleViolation,
     ScanError,
 )
 from ._handlers import Binding, Handler, bind
-from ._markers import Returns, is_notification, is_request, marker_of
+from ._markers import HandlerInfo, Returns, is_notification, kind_of, marker_of
 from ._publishing import PublishStrategy, Sequential
 from ._resolving import DefaultResolver, Resolver
 from ._scan import discover
@@ -72,6 +73,7 @@ class Mediator:
         Raises:
             NotARequest: `request_type` isn't decorated with `@request` or `@notification`.
             InvalidHandlerSignature: `handler` has the wrong shape (see `@handler`).
+            RuleViolation: `handler` breaks a rule of the kind of `request_type`.
             DuplicateHandler: the request `request_type` already has another handler.
 
         """
@@ -136,11 +138,15 @@ class Mediator:
     def _stage(self, binding: Binding, staged: _Staged) -> None:
         """Add `binding` to `staged`, or raise if it can't be registered."""
         target = binding.request_type
-        if is_notification(target):
+        kind = kind_of(target)
+        if kind is None:
+            raise NotARequest(target)
+        reason = kind.check(HandlerInfo(target, binding.source, binding.returns))
+        if reason is not None:
+            raise RuleViolation(binding.source, kind.name, reason)
+        if kind.dispatch == "publish":
             staged.notifications.append(binding)
             return
-        if not is_request(target):
-            raise NotARequest(target)
         existing = staged.requests.get(target) or self._bindings.get(target)
         if existing is not None and existing.source is not binding.source:
             raise DuplicateHandler(target, existing.source, binding.source)

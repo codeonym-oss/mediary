@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from typing import Any, TypeVar, assert_type
 
 from mediary import Mediator, Next, Returns, behavior, handler, request
+from mediary.cqrs import Command, CommandSender, Query, QuerySender, command, query
 
 T = TypeVar("T")
 
@@ -88,3 +89,39 @@ def test_behavior_keeps_the_decorated_type() -> None:
     assert_type(behavior(Passthrough), type[Passthrough])
     assert_type(behavior(order=1)(Passthrough), type[Passthrough])
     Mediator().use(behavior(passthrough))
+
+
+@command
+@dataclass
+class Rename(Command[None]):
+    name: str
+
+
+@query
+@dataclass
+class CountUsers(Query[int]):
+    pass
+
+
+async def rename(request: Rename) -> None:
+    pass
+
+
+async def count_users(request: CountUsers) -> int:
+    return 1
+
+
+async def use_senders(commands: CommandSender, queries: QuerySender) -> None:
+    assert_type(await queries.send(CountUsers()), int)
+    assert_type(await commands.send(Rename("ada")), None)
+    # Each is sent all the same at runtime; only the static errors are under test.
+    await queries.send(Rename("ada"))  # pyright: ignore[reportArgumentType]
+    await commands.send(CountUsers())  # pyright: ignore[reportArgumentType]
+
+
+async def test_a_mediator_is_both_senders_and_each_sends_only_its_kind() -> None:
+    m = Mediator()
+    m.register(Rename, rename)
+    m.register(CountUsers, count_users)
+    await use_senders(m, m)
+    assert_type(command(Rename), type[Rename])

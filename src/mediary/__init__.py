@@ -12,6 +12,7 @@ from ._errors import (
     MediaryError,
     NotANotification,
     NotARequest,
+    RuleViolation,
     ScanError,
 )
 from ._handlers import Handler, handler
@@ -39,6 +40,7 @@ __all__ = [
     "PublishStrategy",
     "Resolver",
     "Returns",
+    "RuleViolation",
     "ScanError",
     "Sequential",
     "__version__",
