@@ -10,29 +10,31 @@
       
       
       
-        <link rel="canonical" href="https://codeonym-oss.github.io/mediary/dev/">
+        <link rel="canonical" href="https://codeonym-oss.github.io/mediary/dev/integrations/anyio/">
       
       
+        <link rel="prev" href="../fastapi/">
       
-        <link rel="next" href="guide/getting-started/">
+      
+        <link rel="next" href="../../recipes/validation/">
       
       
         
       
       
-      <link rel="icon" href="assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
-        <title>mediary</title>
+        <title>AnyIO and trio - mediary</title>
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
-        <link rel="stylesheet" href="assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -51,9 +53,9 @@
       
     
     
-      <link rel="stylesheet" href="assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
     
-    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -78,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#mediary" class="md-skip">
+        <a href="#anyio-and-trio" class="md-skip">
           Skip to content
         </a>
       
@@ -96,7 +98,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="." title="mediary" class="md-header__button md-logo" aria-label="mediary" data-md-component="logo">
+    <a href="../.." title="mediary" class="md-header__button md-logo" aria-label="mediary" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -116,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Home
+              AnyIO and trio
             
           </span>
         </div>
@@ -237,11 +239,9 @@
   
   
   
-    
   
-  
-    <li class="md-tabs__item md-tabs__item--active">
-      <a href="." class="md-tabs__link">
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
         
   
   
@@ -262,7 +262,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="guide/getting-started/" class="md-tabs__link">
+        <a href="../../guide/getting-started/" class="md-tabs__link">
           
   
   
@@ -280,11 +280,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="integrations/dishka/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../dishka/" class="md-tabs__link">
           
   
   
@@ -306,7 +308,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="recipes/validation/" class="md-tabs__link">
+        <a href="../../recipes/validation/" class="md-tabs__link">
           
   
   
@@ -328,7 +330,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="reference/mediary/" class="md-tabs__link">
+        <a href="../../reference/mediary/" class="md-tabs__link">
           
   
   
@@ -348,7 +350,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="changelog/" class="md-tabs__link">
+      <a href="../../changelog/" class="md-tabs__link">
         
   
   
@@ -383,7 +385,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="." title="mediary" class="md-nav__button md-logo" aria-label="mediary" data-md-component="logo">
+    <a href="../.." title="mediary" class="md-nav__button md-logo" aria-label="mediary" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -410,37 +412,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Home
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="." class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -456,59 +431,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#why-mediary" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Why mediary
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#install" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Install
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#next-steps" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Next steps
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -590,7 +512,7 @@
   
   
     <li class="md-nav__item">
-      <a href="guide/getting-started/" class="md-nav__link">
+      <a href="../../guide/getting-started/" class="md-nav__link">
         
   
   
@@ -618,7 +540,7 @@
   
   
     <li class="md-nav__item">
-      <a href="guide/dependency-injection/" class="md-nav__link">
+      <a href="../../guide/dependency-injection/" class="md-nav__link">
         
   
   
@@ -646,7 +568,7 @@
   
   
     <li class="md-nav__item">
-      <a href="guide/behaviors/" class="md-nav__link">
+      <a href="../../guide/behaviors/" class="md-nav__link">
         
   
   
@@ -674,7 +596,7 @@
   
   
     <li class="md-nav__item">
-      <a href="guide/notifications/" class="md-nav__link">
+      <a href="../../guide/notifications/" class="md-nav__link">
         
   
   
@@ -702,7 +624,7 @@
   
   
     <li class="md-nav__item">
-      <a href="guide/streams/" class="md-nav__link">
+      <a href="../../guide/streams/" class="md-nav__link">
         
   
   
@@ -730,7 +652,7 @@
   
   
     <li class="md-nav__item">
-      <a href="guide/cqrs/" class="md-nav__link">
+      <a href="../../guide/cqrs/" class="md-nav__link">
         
   
   
@@ -758,7 +680,7 @@
   
   
     <li class="md-nav__item">
-      <a href="guide/custom-kinds/" class="md-nav__link">
+      <a href="../../guide/custom-kinds/" class="md-nav__link">
         
   
   
@@ -786,7 +708,7 @@
   
   
     <li class="md-nav__item">
-      <a href="guide/testing/" class="md-nav__link">
+      <a href="../../guide/testing/" class="md-nav__link">
         
   
   
@@ -818,8 +740,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -833,19 +757,22 @@
     
     
       
+        
+        
+      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
             
   
   
@@ -863,7 +790,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -881,7 +808,7 @@
   
   
     <li class="md-nav__item">
-      <a href="integrations/dishka/" class="md-nav__link">
+      <a href="../dishka/" class="md-nav__link">
         
   
   
@@ -909,7 +836,7 @@
   
   
     <li class="md-nav__item">
-      <a href="integrations/fastapi/" class="md-nav__link">
+      <a href="../fastapi/" class="md-nav__link">
         
   
   
@@ -934,10 +861,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="integrations/anyio/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AnyIO and trio
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -953,6 +907,48 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#things-to-know-under-trio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Things to know under trio
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing-on-both" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing on both
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1034,7 +1030,7 @@
   
   
     <li class="md-nav__item">
-      <a href="recipes/validation/" class="md-nav__link">
+      <a href="../../recipes/validation/" class="md-nav__link">
         
   
   
@@ -1062,7 +1058,7 @@
   
   
     <li class="md-nav__item">
-      <a href="recipes/transactions/" class="md-nav__link">
+      <a href="../../recipes/transactions/" class="md-nav__link">
         
   
   
@@ -1090,7 +1086,7 @@
   
   
     <li class="md-nav__item">
-      <a href="recipes/caching/" class="md-nav__link">
+      <a href="../../recipes/caching/" class="md-nav__link">
         
   
   
@@ -1118,7 +1114,7 @@
   
   
     <li class="md-nav__item">
-      <a href="recipes/events/" class="md-nav__link">
+      <a href="../../recipes/events/" class="md-nav__link">
         
   
   
@@ -1221,7 +1217,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/mediary/" class="md-nav__link">
+      <a href="../../reference/mediary/" class="md-nav__link">
         
   
   
@@ -1249,7 +1245,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/cqrs/" class="md-nav__link">
+      <a href="../../reference/cqrs/" class="md-nav__link">
         
   
   
@@ -1277,7 +1273,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/kinds/" class="md-nav__link">
+      <a href="../../reference/kinds/" class="md-nav__link">
         
   
   
@@ -1305,7 +1301,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/behaviors/" class="md-nav__link">
+      <a href="../../reference/behaviors/" class="md-nav__link">
         
   
   
@@ -1333,7 +1329,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/testing/" class="md-nav__link">
+      <a href="../../reference/testing/" class="md-nav__link">
         
   
   
@@ -1361,7 +1357,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/ext-dishka/" class="md-nav__link">
+      <a href="../../reference/ext-dishka/" class="md-nav__link">
         
   
   
@@ -1389,7 +1385,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/ext-fastapi/" class="md-nav__link">
+      <a href="../../reference/ext-fastapi/" class="md-nav__link">
         
   
   
@@ -1424,7 +1420,7 @@
   
   
     <li class="md-nav__item">
-      <a href="changelog/" class="md-nav__link">
+      <a href="../../changelog/" class="md-nav__link">
         
   
   
@@ -1471,10 +1467,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#why-mediary" class="md-nav__link">
+  <a href="#things-to-know-under-trio" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Why mediary
+        Things to know under trio
       
     </span>
   </a>
@@ -1482,21 +1478,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#install" class="md-nav__link">
+  <a href="#testing-on-both" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Install
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#next-steps" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Next steps
+        Testing on both
       
     </span>
   </a>
@@ -1520,7 +1505,7 @@
 
 
   
-    <a href="https://github.com/codeonym-oss/mediary/edit/main/docs/index.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/codeonym-oss/mediary/edit/main/docs/integrations/anyio.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -1528,78 +1513,64 @@
   
 
 
-<h1 id="mediary">mediary<a class="headerlink" href="#mediary" title="Permanent link">&para;</a></h1>
-<p>Typed, decorator-driven mediator + CQRS for Python — handlers, pipelines and notifications discovered by package scan.</p>
-<p>A mediator decouples the code that asks for something from the code that does it. Callers send messages — a request, a command, a query, a notification — and never import their handlers; cross-cutting concerns such as logging, retries, validation and transactions wrap every handler as a pipeline of behaviors.</p>
-<div class="highlight"><span class="filename">shop/orders.py</span><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">mediary</span><span class="w"> </span><span class="kn">import</span> <span class="n">Returns</span><span class="p">,</span> <span class="n">handler</span><span class="p">,</span> <span class="n">request</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="nd">@request</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="nd">@dataclass</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="k">class</span><span class="w"> </span><span class="nc">PlaceOrder</span><span class="p">(</span><span class="n">Returns</span><span class="p">[</span><span class="nb">int</span><span class="p">]):</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">item</span><span class="p">:</span> <span class="nb">str</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">quantity</span><span class="p">:</span> <span class="nb">int</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="nd">@handler</span>
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="k">class</span><span class="w"> </span><span class="nc">PlaceOrderHandler</span><span class="p">:</span>
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">handle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="n">PlaceOrder</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>        <span class="k">return</span> <span class="mi">42</span>  <span class="c1"># the new order's id</span>
+<h1 id="anyio-and-trio">AnyIO and trio<a class="headerlink" href="#anyio-and-trio" title="Permanent link">&para;</a></h1>
+<p>mediary runs on asyncio with the standard library alone. To run it on <a href="https://trio.readthedocs.io/">trio</a> — or any event loop <a href="https://anyio.readthedocs.io/">AnyIO</a> supports — install the extra:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>mediary<span class="o">[</span>anyio<span class="o">]</span>
 </code></pre></div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">mediary</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mediator</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">shop.orders</span><span class="w"> </span><span class="kn">import</span> <span class="n">PlaceOrder</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">mediator</span> <span class="o">=</span> <span class="n">Mediator</span><span class="p">()</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">mediator</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="s2">"shop"</span><span class="p">)</span>  <span class="c1"># registers every @handler in the package</span>
+<p>There is nothing to configure. <code>send</code>, <code>publish</code> and <code>stream</code> don't depend on an event loop; the three built-ins that do — the <code>Concurrent</code> publish strategy, <code>RetryBehavior</code>'s sleep between attempts and <code>TimeoutBehavior</code> — use asyncio when it is running, and AnyIO otherwise. Asyncio apps never import AnyIO, whether it is installed or not.</p>
+<!-- requires: trio,anyio -->
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">trio</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">mediary</span><span class="w"> </span><span class="kn">import</span> <span class="n">Concurrent</span><span class="p">,</span> <span class="n">HandlerTimeout</span><span class="p">,</span> <span class="n">Mediator</span><span class="p">,</span> <span class="n">notification</span><span class="p">,</span> <span class="n">request</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">mediary.behaviors</span><span class="w"> </span><span class="kn">import</span> <span class="n">TimeoutBehavior</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
 <a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="n">order_id</span> <span class="o">=</span> <span class="k">await</span> <span class="n">mediator</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">PlaceOrder</span><span class="p">(</span><span class="s2">"book"</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>  <span class="c1"># typed as int</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="k">assert</span> <span class="n">order_id</span> <span class="o">==</span> <span class="mi">42</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="nd">@notification</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="k">class</span><span class="w"> </span><span class="nc">Started</span><span class="p">:</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    <span class="k">pass</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="nd">@request</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="k">class</span><span class="w"> </span><span class="nc">Slow</span><span class="p">:</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>    <span class="k">pass</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="n">greeted</span> <span class="o">=</span> <span class="p">[]</span>
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>
+<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>
+<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">greet</span><span class="p">(</span><span class="n">event</span><span class="p">:</span> <span class="n">Started</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>    <span class="n">greeted</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"hello"</span><span class="p">)</span>
+<a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>
+<a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>
+<a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">slow</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">Slow</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a>    <span class="k">await</span> <span class="n">trio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+<a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>
+<a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a>
+<a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a>    <span class="n">mediator</span> <span class="o">=</span> <span class="n">Mediator</span><span class="p">(</span><span class="n">publish_strategy</span><span class="o">=</span><span class="n">Concurrent</span><span class="p">())</span>  <span class="c1"># a trio nursery here</span>
+<a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a>    <span class="n">mediator</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">Started</span><span class="p">,</span> <span class="n">greet</span><span class="p">)</span>
+<a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a>    <span class="n">mediator</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">Slow</span><span class="p">,</span> <span class="n">slow</span><span class="p">)</span>
+<a id="__codelineno-1-32" name="__codelineno-1-32" href="#__codelineno-1-32"></a>    <span class="n">mediator</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="n">TimeoutBehavior</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="mf">0.01</span><span class="p">))</span>  <span class="c1"># a trio cancel scope here</span>
+<a id="__codelineno-1-33" name="__codelineno-1-33" href="#__codelineno-1-33"></a>
+<a id="__codelineno-1-34" name="__codelineno-1-34" href="#__codelineno-1-34"></a>    <span class="k">await</span> <span class="n">mediator</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="n">Started</span><span class="p">())</span>
+<a id="__codelineno-1-35" name="__codelineno-1-35" href="#__codelineno-1-35"></a>    <span class="k">try</span><span class="p">:</span>
+<a id="__codelineno-1-36" name="__codelineno-1-36" href="#__codelineno-1-36"></a>        <span class="k">await</span> <span class="n">mediator</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">Slow</span><span class="p">())</span>
+<a id="__codelineno-1-37" name="__codelineno-1-37" href="#__codelineno-1-37"></a>    <span class="k">except</span> <span class="n">HandlerTimeout</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+<a id="__codelineno-1-38" name="__codelineno-1-38" href="#__codelineno-1-38"></a>        <span class="nb">print</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>  <span class="c1"># Slow was not handled within 0.01s</span>
+<a id="__codelineno-1-39" name="__codelineno-1-39" href="#__codelineno-1-39"></a>
+<a id="__codelineno-1-40" name="__codelineno-1-40" href="#__codelineno-1-40"></a>
+<a id="__codelineno-1-41" name="__codelineno-1-41" href="#__codelineno-1-41"></a><span class="n">trio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">main</span><span class="p">)</span>
+<a id="__codelineno-1-42" name="__codelineno-1-42" href="#__codelineno-1-42"></a><span class="k">assert</span> <span class="n">greeted</span> <span class="o">==</span> <span class="p">[</span><span class="s2">"hello"</span><span class="p">]</span>
 </code></pre></div>
-<h2 id="why-mediary">Why mediary<a class="headerlink" href="#why-mediary" title="Permanent link">&para;</a></h2>
+<p>Without the extra, the first of those built-ins used outside asyncio raises a <code>ModuleNotFoundError</code> that says to install it.</p>
+<h2 id="things-to-know-under-trio">Things to know under trio<a class="headerlink" href="#things-to-know-under-trio" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Decorate, don't register.</strong> Mark requests with <code>@request</code> and handlers with <code>@handler</code>; one <code>mediator.scan("app")</code> wires the whole package, and reports every wiring mistake at startup.</li>
-<li><strong>Typed end to end.</strong> <code>await mediator.send(GetUser(1))</code> is typed as <code>User</code>. Handlers are plain classes or functions, matched structurally: nothing to inherit.</li>
-<li><strong>Pipelines.</strong> <a href="guide/behaviors/">Behaviors</a> wrap handlers like middleware, targeted by type, <code>Protocol</code> or kind, and ordered. Logging, retry and timeout ship ready-made.</li>
-<li><strong><a href="guide/notifications/">Notifications</a></strong> to any number of handlers, sequentially or concurrently, and <strong><a href="guide/streams/">streams</a></strong> of items from async generators.</li>
-<li><strong><a href="guide/cqrs/">CQRS</a>.</strong> <code>@command</code>, <code>@query</code>, <code>@event</code>, and senders that can only send one kind.</li>
-<li><strong>Pluggable <a href="guide/dependency-injection/">dependency injection</a></strong>, with ready-made <a href="integrations/dishka/">dishka</a> and <a href="integrations/fastapi/">FastAPI</a> integrations.</li>
-<li><strong><a href="guide/testing/">Testing</a></strong> helpers and a pytest fixture.</li>
-<li><strong>Zero dependencies</strong>, Python 3.11+. Runs on asyncio, or on <a href="integrations/anyio/">trio</a> through AnyIO.</li>
+<li><strong>Close streams with <code>async with</code>.</strong> Trio can't finalize an async generator that is garbage-collected mid-iteration, and warns when one is. Iterate <a href="../../guide/streams/">streams</a> inside <code>async with</code>, or call <code>aclose()</code>.</li>
+<li><strong>Your own code picks its primitives.</strong> Handlers, behaviors and <a href="../../guide/notifications/#your-own-strategy">publish strategies</a> you write use whatever your app uses: trio's, AnyIO's, or asyncio's.</li>
+<li><strong>Integrations follow their frameworks.</strong> FastAPI runs on AnyIO already; check that the others you use support trio.</li>
 </ul>
-<h2 id="install">Install<a class="headerlink" href="#install" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>pip<span class="w"> </span>install<span class="w"> </span>mediary<span class="w">        </span><span class="c1"># or: uv add mediary</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>pip<span class="w"> </span>install<span class="w"> </span>mediary<span class="o">[</span>full<span class="o">]</span><span class="w">  </span><span class="c1"># with every integration</span>
-</code></pre></div>
-<table>
-<thead>
-<tr>
-<th>Extra</th>
-<th>Adds</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>mediary[anyio]</code></td>
-<td>running on <a href="integrations/anyio/">trio</a>, through AnyIO</td>
-</tr>
-<tr>
-<td><code>mediary[dishka]</code></td>
-<td><a href="integrations/dishka/">dishka</a> container integration</td>
-</tr>
-<tr>
-<td><code>mediary[fastapi]</code></td>
-<td><a href="integrations/fastapi/">FastAPI</a> integration, without a container</td>
-</tr>
-<tr>
-<td><code>mediary[full]</code></td>
-<td>all of the above</td>
-</tr>
-</tbody>
-</table>
-<h2 id="next-steps">Next steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
-<p>Start with <a href="guide/getting-started/">Getting started</a>, or jump to the <a href="recipes/validation/">recipes</a> for common pipelines. Every example in these docs runs in CI, as written.</p>
+<h2 id="testing-on-both">Testing on both<a class="headerlink" href="#testing-on-both" title="Permanent link">&para;</a></h2>
+<p>mediary's own test suite runs every async test under asyncio and trio, with <a href="https://anyio.readthedocs.io/en/stable/testing.html">AnyIO's pytest plugin</a>. The <code>mediator</code> fixture works under either, and so does <code>RecordingMediator</code>.</p>
 
 
 
@@ -1634,15 +1605,31 @@
       
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
+          
+          <a href="../fastapi/" class="md-footer__link md-footer__link--prev" aria-label="Previous: FastAPI">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                FastAPI
+              </div>
+            </div>
+          </a>
+        
         
           
-          <a href="guide/getting-started/" class="md-footer__link md-footer__link--next" aria-label="Next: Getting started">
+          <a href="../../recipes/validation/" class="md-footer__link md-footer__link--next" aria-label="Next: Validation">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Getting started
+                Validation
               </div>
             </div>
             <div class="md-footer__button md-icon">
@@ -1710,10 +1697,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": ["content.action.edit", "content.code.copy", "navigation.footer", "navigation.indexes", "navigation.instant", "navigation.sections", "navigation.tabs", "navigation.top", "search.highlight", "search.suggest", "toc.follow"], "search": "assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["content.action.edit", "content.code.copy", "navigation.footer", "navigation.indexes", "navigation.instant", "navigation.sections", "navigation.tabs", "navigation.top", "search.highlight", "search.suggest", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

@@ -845,6 +845,8 @@
       
         
       
+        
+      
     
     
     
@@ -933,6 +935,34 @@
     
   
     FastAPI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../integrations/anyio/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AnyIO and trio
   
 
     
@@ -1567,7 +1597,7 @@
 <p>A <strong>publish strategy</strong> runs a notification's handlers. Two ship with mediary:</p>
 <ul>
 <li><strong><code>Sequential()</code></strong>, the default, runs them one after another. The first error stops the rest and propagates.</li>
-<li><strong><code>Concurrent()</code></strong> runs them all at once, in an <code>asyncio.TaskGroup</code>. Every handler runs to completion even when some fail; their errors are then raised together, in an <code>ExceptionGroup</code>.</li>
+<li><strong><code>Concurrent()</code></strong> runs them all at once, in a task group. Every handler runs to completion even when some fail; their errors are then raised together, in an <code>ExceptionGroup</code>.</li>
 </ul>
 <p>Choose one per mediator, or per publish:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">mediary</span><span class="w"> </span><span class="kn">import</span> <span class="n">Concurrent</span><span class="p">,</span> <span class="n">notification</span>

@@ -749,6 +749,8 @@
       
         
       
+        
+      
     
     
     
@@ -837,6 +839,34 @@
     
   
     FastAPI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../integrations/anyio/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AnyIO and trio
   
 
     
@@ -4394,9 +4424,10 @@ default resolver calls <code>cls()</code>.</p>
 
 
 
-        <p>Run all handlers concurrently in an <code>asyncio.TaskGroup</code>.</p>
+        <p>Run all handlers concurrently, in a task group.</p>
 <p>Every handler runs to completion even if others fail; failures are then raised together
-as an <code>ExceptionGroup</code>, in handler order.</p>
+as an <code>ExceptionGroup</code>, in handler order. It runs on asyncio, or on trio and other event
+loops through AnyIO (<code>mediary[anyio]</code>).</p>
 
 
 

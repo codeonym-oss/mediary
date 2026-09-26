@@ -878,6 +878,8 @@
       
         
       
+        
+      
     
     
     
@@ -966,6 +968,34 @@
     
   
     FastAPI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../integrations/anyio/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AnyIO and trio
   
 
     
@@ -1597,7 +1627,7 @@
 <h2 id="install">Install<a class="headerlink" href="#install" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>mediary<span class="w">  </span><span class="c1"># or: uv add mediary</span>
 </code></pre></div>
-<p>mediary needs Python 3.11 or later and has no dependencies. It runs on asyncio: handlers are <code>async</code>, and so are <code>send</code> and <code>publish</code>.</p>
+<p>mediary needs Python 3.11 or later and has no dependencies. Handlers are <code>async</code>, and so are <code>send</code> and <code>publish</code>. It runs on asyncio, or on trio with <code>mediary[anyio]</code> (see <a href="../../integrations/anyio/">AnyIO and trio</a>).</p>
 <h2 id="requests-and-handlers">Requests and handlers<a class="headerlink" href="#requests-and-handlers" title="Permanent link">&para;</a></h2>
 <p>A <strong>request</strong> is a message that asks for something and gets one result back. Declare it as any class — a dataclass, a Pydantic model, an attrs class — decorated with <code>@request</code>, and say what its handler returns with <code>Returns[...]</code>:</p>
 <div class="highlight"><span class="filename">shop/orders.py</span><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
