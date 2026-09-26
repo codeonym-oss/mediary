@@ -6,6 +6,7 @@ dependencies can ask for that `Request` or `WebSocket`; everything else is resol
 mediator's own resolver, or by a resolver you make for each connection.
 
 Example:
+    ```python
     app = FastAPI()
     mediator = Mediator()
     mediator.scan("app")
@@ -14,6 +15,7 @@ Example:
     @app.post("/orders")
     async def place_order(order: PlaceOrder, mediator: MediatorDep) -> int:
         return await mediator.send(order)
+    ```
 
 With a DI container such as dishka, use its FastAPI integration and `mediary.ext.dishka`
 instead, for request-scoped dependencies.

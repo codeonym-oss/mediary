@@ -22,10 +22,12 @@ class Stream(AsyncIterator[_T_co]):
     of its behaviors and handler at once, rather than whenever the stream is garbage-collected.
 
     Example:
+        ```python
         async with mediator.stream(ExportOrders(since)) as orders:
             async for order in orders:
                 if order.total > limit:
                     break  # the handler's cursor is closed when the block exits
+        ```
 
     """
 

@@ -3,6 +3,7 @@
 [![PyPI](https://img.shields.io/pypi/v/mediary)](https://pypi.org/project/mediary/)
 [![Python](https://img.shields.io/pypi/pyversions/mediary)](https://pypi.org/project/mediary/)
 [![CI](https://github.com/codeonym-oss/mediary/actions/workflows/ci.yml/badge.svg)](https://github.com/codeonym-oss/mediary/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/badge/docs-mediary-blue)](https://codeonym-oss.github.io/mediary/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](https://github.com/codeonym-oss/mediary/blob/main/LICENSE)
 
 Typed, decorator-driven mediator + CQRS for Python — handlers, pipelines and notifications discovered by package scan.
@@ -14,6 +15,8 @@ Typed, decorator-driven mediator + CQRS for Python — handlers, pipelines and n
 - **CQRS pack.** `@command`, `@query`, `@event`, and senders that can only send one kind.
 - **Pluggable DI**, with ready-made **dishka** and **FastAPI** integrations as extras.
 - **Testing helpers** and a **pytest fixture**. Zero dependencies, asyncio only, Python 3.11+.
+
+**[Documentation](https://codeonym-oss.github.io/mediary/)**: guides, recipes and the API reference.
 
 ## Install
 
@@ -427,6 +430,7 @@ uv sync                        # create .venv with dev tools
 uv run pre-commit install      # lint, format and typecheck on commit
 uv run pytest                  # tests + coverage gate (95%)
 uv run pyright                 # strict type checking
+uv run mkdocs serve            # the docs site, at http://127.0.0.1:8000
 ```
 
 ## License

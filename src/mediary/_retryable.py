@@ -15,9 +15,11 @@ def retryable(cls: _E) -> _E:
     `RetryBehavior(retry_on=...)` instead.
 
     Example:
+        ```python
         @retryable
         class PaymentGatewayUnavailable(Exception):
             pass
+        ```
 
     Raises:
         TypeError: `cls` isn't an `Exception` subclass, or it is a built-in one.
@@ -52,7 +54,9 @@ class TransientError(Exception):
     Subclasses are retried by `RetryBehavior`, like any exception marked `@retryable`.
 
     Example:
+        ```python
         class RateLimited(TransientError):
             pass
+        ```
 
     """

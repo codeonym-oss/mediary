@@ -6,6 +6,7 @@ mediators, so each test registers only what it needs. With mediary installed, py
 a fresh one as the `mediator` fixture.
 
 Example:
+    ```python
     async def test_registering_welcomes_the_user(mediator: RecordingMediator) -> None:
         mediator.register(Register, register_user)
         mediator.stub(GetPlan, Plan.FREE)
@@ -13,6 +14,7 @@ Example:
         await mediator.send(Register("ada@example.com"))
 
         assert mediator.published_of(Welcomed) == [Welcomed("ada@example.com")]
+    ```
 
 """
 

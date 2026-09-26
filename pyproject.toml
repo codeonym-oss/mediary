@@ -31,6 +31,7 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://github.com/codeonym-oss/mediary"
+Documentation = "https://codeonym-oss.github.io/mediary/"
 Repository = "https://github.com/codeonym-oss/mediary"
 Issues = "https://github.com/codeonym-oss/mediary/issues"
 Changelog = "https://github.com/codeonym-oss/mediary/blob/main/CHANGELOG.md"
@@ -57,12 +58,20 @@ test = [
 ]
 dev = [
     {include-group = "test"},
+    {include-group = "docs"},
     "commitizen>=4.8",
     "pre-commit>=4.3",
     "pyright[nodejs]>=1.1.400",
     "ruff>=0.16",
     # Every extra, so pyright and the full test run see all of mediary.
     "mediary[full]",
+]
+# The docs site: `uv run mkdocs serve`.
+docs = [
+    "mike>=2.2",
+    "mkdocs>=1.6,<2",
+    "mkdocs-material>=9.7",
+    "mkdocstrings[python]>=1.0",
 ]
 
 [tool.ruff]

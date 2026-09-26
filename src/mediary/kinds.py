@@ -5,6 +5,7 @@ rules their handlers must follow. Handlers, behaviors, `scan` and `LoggingBehavi
 every kind, and behaviors can target one with `kinds={"<name>"}`.
 
 Example:
+    ```python
     from mediary.kinds import HandlerInfo, define_kind
 
     def returns_a_report(info: HandlerInfo) -> str | None:
@@ -13,6 +14,7 @@ Example:
         return None
 
     report = define_kind("report", dispatch="send", rules=[returns_a_report])
+    ```
 
 """
 

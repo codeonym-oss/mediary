@@ -19,6 +19,7 @@ class Resolver(Protocol):
     default resolver calls `cls()`.
 
     Example:
+        ```python
         class ContainerResolver:
             def __init__(self, container: Container) -> None:
                 self.container = container
@@ -27,6 +28,7 @@ class Resolver(Protocol):
                 return self.container.get(cls)
 
         mediator = Mediator(resolver=ContainerResolver(container))
+        ```
 
     """
 
