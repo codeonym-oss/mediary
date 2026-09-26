@@ -54,6 +54,14 @@ class InvalidHandlerSignature(MediaryError, TypeError):
         super().__init__(f"Invalid handler {_name(handler)}: {reason}")
 
 
+class InvalidBehaviorSignature(MediaryError, TypeError):
+    """A behavior doesn't have the shape mediary can call."""
+
+    def __init__(self, behavior: object, reason: str) -> None:
+        self.behavior = behavior
+        super().__init__(f"Invalid behavior {_name(behavior)}: {reason}")
+
+
 class ScanError(MediaryError):
     """`Mediator.scan` found problems; `errors` holds every one of them.
 
