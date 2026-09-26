@@ -20,6 +20,7 @@ from typing import Any, TypeVar
 from ._behaviors import Next
 from ._errors import HandlerTimeout
 from ._markers import marker_of
+from ._retryable import is_retryable
 
 __all__ = ["LoggingBehavior", "RetryBehavior", "TimeoutBehavior"]
 
@@ -99,7 +100,11 @@ class LoggingBehavior:
 
 
 class RetryBehavior:
-    """Run the rest of the pipeline again when it raises one of `retry_on`.
+    """Run the rest of the pipeline again when it fails with a transient error.
+
+    An error is transient when its class is marked `@retryable` (as `TransientError` and its
+    subclasses are) or is one of `retry_on`, which is for errors that can't be marked, such as
+    `ConnectionError`. Any other error fails at once.
 
     After the first attempt it retries up to `max_retries` times, sleeping an exponentially
     growing delay between attempts: `base_delay * 2**n`, capped at `max_delay`, and with
@@ -111,7 +116,7 @@ class RetryBehavior:
         self,
         *,
         max_retries: int = 3,
-        retry_on: tuple[type[Exception], ...] = (ConnectionError, TimeoutError),
+        retry_on: tuple[type[Exception], ...] = (),
         base_delay: float = 0.1,
         max_delay: float = 10.0,
         jitter: bool = True,
@@ -139,9 +144,15 @@ class RetryBehavior:
         for retry in range(self.max_retries):
             try:
                 return await next()
-            except self.retry_on:
-                await self.sleep(self.delay(retry))
+            except Exception as error:
+                if not self.retries(error):
+                    raise
+            await self.sleep(self.delay(retry))
         return await next()
+
+    def retries(self, error: Exception) -> bool:
+        """Whether `error` is transient: marked `@retryable`, or one of `retry_on`."""
+        return is_retryable(error) or isinstance(error, self.retry_on)
 
     def delay(self, retry: int) -> float:
         """Return the seconds to wait before retry number `retry` (counting from 0)."""

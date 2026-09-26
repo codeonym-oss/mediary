@@ -5,7 +5,15 @@ from typing import Any, ClassVar
 
 import pytest
 
-from mediary import HandlerTimeout, Mediator, Returns, notification, request
+from mediary import (
+    HandlerTimeout,
+    Mediator,
+    Returns,
+    TransientError,
+    notification,
+    request,
+    retryable,
+)
 from mediary.behaviors import LoggingBehavior, RetryBehavior, TimeoutBehavior
 
 
@@ -159,8 +167,21 @@ class Sleeps:
         self.delays.append(delay)
 
 
+class Unavailable(TransientError):
+    pass
+
+
+@retryable
+class StorageError(Exception):
+    pass
+
+
+class DiskFull(StorageError):
+    pass
+
+
 async def test_retry_backs_off_exponentially_with_jitter() -> None:
-    Script.errors = [ConnectionError(), TimeoutError()]
+    Script.errors = [Unavailable(), Unavailable()]
     sleep = Sleeps()
     retry = RetryBehavior(sleep=sleep, random=lambda: 0.5)
     assert await mediator_with(retry).send(Work()) == "done"
@@ -174,26 +195,71 @@ async def test_retry_delays_are_capped() -> None:
 
 
 async def test_retry_gives_up_with_the_last_error() -> None:
-    Script.errors = [ConnectionError("1"), ConnectionError("2"), ConnectionError("3")]
+    Script.errors = [Unavailable("1"), Unavailable("2"), Unavailable("3")]
     sleep = Sleeps()
-    with pytest.raises(ConnectionError, match="3"):
+    with pytest.raises(Unavailable, match="3"):
         await mediator_with(RetryBehavior(max_retries=2, sleep=sleep, jitter=False)).send(Work())
     assert Script.calls == 3
     assert sleep.delays == [0.1, 0.2]
 
 
-async def test_retry_only_retries_the_given_errors() -> None:
+@pytest.mark.parametrize(
+    ("error", "retried"),
+    [
+        (Unavailable(), True),
+        (StorageError(), True),
+        (DiskFull(), True),
+        (ValueError(), False),
+        (ConnectionError(), False),
+        (TimeoutError(), False),
+    ],
+)
+def test_retry_only_retries_errors_marked_retryable(error: Exception, retried: bool) -> None:
+    assert RetryBehavior().retries(error) is retried
+
+
+def test_retry_on_adds_errors_that_cannot_be_marked() -> None:
+    retry = RetryBehavior(retry_on=(ConnectionError,))
+    assert retry.retries(ConnectionResetError())
+    assert retry.retries(Unavailable())
+    assert not retry.retries(TimeoutError())
+
+
+async def test_errors_that_are_not_transient_fail_at_once() -> None:
     Script.errors = [ValueError("not transient")]
+    sleep = Sleeps()
     with pytest.raises(ValueError, match="not transient"):
-        await mediator_with(RetryBehavior(sleep=Sleeps())).send(Work())
-    assert Script.calls == 1
+        await mediator_with(RetryBehavior(sleep=sleep)).send(Work())
+    assert (Script.calls, sleep.delays) == (1, [])
 
 
 async def test_retry_can_be_disabled() -> None:
-    Script.errors = [ConnectionError()]
-    with pytest.raises(ConnectionError):
+    Script.errors = [Unavailable()]
+    with pytest.raises(Unavailable):
         await mediator_with(RetryBehavior(max_retries=0)).send(Work())
     assert Script.calls == 1
+
+
+def test_marking_a_subclass_leaves_its_base_alone() -> None:
+    @retryable
+    class Flaky(ValueError):
+        pass
+
+    assert RetryBehavior().retries(Flaky())
+    assert not RetryBehavior().retries(ValueError())
+
+
+@pytest.mark.parametrize(
+    ("target", "reason"),
+    [
+        (object, "decorates exception classes"),
+        (KeyboardInterrupt, "decorates exception classes"),
+        (ConnectionError, r"retry_on=\(ConnectionError,\)"),
+    ],
+)
+def test_retryable_needs_an_exception_class_it_can_mark(target: Any, reason: str) -> None:
+    with pytest.raises(TypeError, match=reason):
+        retryable(target)
 
 
 @pytest.mark.parametrize(
@@ -235,7 +301,7 @@ def test_timeout_must_be_positive() -> None:
 
 
 async def test_built_ins_compose_as_configured_instances(logs: pytest.LogCaptureFixture) -> None:
-    Script.errors = [ConnectionError()]
+    Script.errors = [Unavailable()]
     m = mediator_with()
     m.use(logging_behavior(0.0, 0.0), order=0)
     m.use(TimeoutBehavior(5), order=1)
@@ -247,6 +313,6 @@ async def test_built_ins_compose_as_configured_instances(logs: pytest.LogCapture
 async def test_built_ins_are_never_scanned() -> None:
     m = mediator_with()
     m.scan("mediary.behaviors")
-    Script.errors = [ConnectionError()]
-    with pytest.raises(ConnectionError):
+    Script.errors = [Unavailable()]
+    with pytest.raises(Unavailable):
         await m.send(Work())

@@ -20,6 +20,7 @@ from ._markers import Returns, notification, request
 from ._mediator import Mediator
 from ._publishing import Concurrent, PublishStrategy, Sequential
 from ._resolving import Resolver
+from ._retryable import TransientError, retryable
 
 __version__: str = version("mediary")
 
@@ -43,9 +44,11 @@ __all__ = [
     "RuleViolation",
     "ScanError",
     "Sequential",
+    "TransientError",
     "__version__",
     "behavior",
     "handler",
     "notification",
     "request",
+    "retryable",
 ]
