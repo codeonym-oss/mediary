@@ -7,6 +7,8 @@ from pathlib import Path
 
 import pytest
 
+pytest_plugins = ["pytester", "mediary.pytest_plugin"]
+
 MakePackage = Callable[[dict[str, str]], str]
 
 
