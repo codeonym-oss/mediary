@@ -1,24 +1,24 @@
 """CQRS: commands change state, queries read it, and events announce what happened.
 
-`@command` and `@query` are sent to exactly one handler; `@event` is published to any number.
+``@command`` and ``@query`` are sent to exactly one handler; ``@event`` is published to any number.
 A query handler annotated to return None is rejected when it is registered or scanned.
-Behaviors can target each with `kinds={"command"}`, `{"query"}` or `{"event"}`.
+Behaviors can target each with ``kinds={"command"}``, ``{"query"}`` or ``{"event"}``.
 
-The pack is built only on the public `mediary.kinds` API. Give each piece of code the
+The pack is built only on the public ``mediary.kinds`` API. Give each piece of code the
 narrowest sender it needs, so that, for instance, a read-only view can't send a command.
 
 Example:
-    ```python
-    @query
-    @dataclass
-    class GetUser(Query[User]):
-        user_id: int
+    .. code-block:: python
 
-    async def show(users: QuerySender, user_id: int) -> User:
-        return await users.send(GetUser(user_id))
+        @query
+        @dataclass
+        class GetUser(Query[User]):
+            user_id: int
 
-    await show(mediator, 1)  # a Mediator is both a QuerySender and a CommandSender
-    ```
+        async def show(users: QuerySender, user_id: int) -> User:
+            return await users.send(GetUser(user_id))
+
+        await show(mediator, 1)  # a Mediator is both a QuerySender and a CommandSender
 
 """
 
@@ -35,13 +35,13 @@ _C = TypeVar("_C", bound=type)
 
 
 class Command(Returns[_R_co]):
-    """Base for commands: declares what the handler returns, and types `CommandSender.send`."""
+    """Base for commands: declares what the handler returns, and types ``CommandSender.send``."""
 
     __slots__ = ()
 
 
 class Query(Returns[_R_co]):
-    """Base for queries: declares what the handler returns, and types `QuerySender.send`."""
+    """Base for queries: declares what the handler returns, and types ``QuerySender.send``."""
 
     __slots__ = ()
 
@@ -61,7 +61,7 @@ def command(cls: _C) -> _C:
     """Mark a class as a command: a request to change state, sent to exactly one handler.
 
     Raises:
-        TypeError: `cls` subclasses `Query`.
+        TypeError: ``cls`` subclasses ``Query``.
 
     """
     if issubclass(cls, Query):
@@ -75,7 +75,7 @@ def query(cls: _C) -> _C:
     Its handler must not be annotated to return None.
 
     Raises:
-        TypeError: `cls` subclasses `Command`.
+        TypeError: ``cls`` subclasses ``Command``.
 
     """
     if issubclass(cls, Command):
@@ -89,16 +89,16 @@ def event(cls: _C) -> _C:
 
 
 class CommandSender(Protocol):
-    """Something that sends commands, such as a `Mediator`."""
+    """Something that sends commands, such as a ``Mediator``."""
 
     async def send(self, command: Command[_R], /) -> _R:
-        """Send `command` to its handler and return the result."""
+        """Send ``command`` to its handler and return the result."""
         ...
 
 
 class QuerySender(Protocol):
-    """Something that sends queries, such as a `Mediator`."""
+    """Something that sends queries, such as a ``Mediator``."""
 
     async def send(self, query: Query[_R], /) -> _R:
-        """Send `query` to its handler and return the result."""
+        """Send ``query`` to its handler and return the result."""
         ...

@@ -1,4 +1,4 @@
-"""Marking exceptions as transient, so that `RetryBehavior` retries them."""
+"""Marking exceptions as transient, so that ``RetryBehavior`` retries them."""
 
 from typing import Final, TypeVar
 
@@ -8,21 +8,21 @@ _RETRYABLE_ATTR: Final = "__mediary_retryable__"
 
 
 def retryable(cls: _E) -> _E:
-    """Mark an exception class as transient, so that `RetryBehavior` retries it.
+    """Mark an exception class as transient, so that ``RetryBehavior`` retries it.
 
     Subclasses are retryable too, so marking a base marks a whole family of errors. For
     exceptions you can't decorate, such as built-in or third-party ones, pass them to
-    `RetryBehavior(retry_on=...)` instead.
+    ``RetryBehavior(retry_on=...)`` instead.
 
     Example:
-        ```python
-        @retryable
-        class PaymentGatewayUnavailable(Exception):
-            pass
-        ```
+        .. code-block:: python
+
+            @retryable
+            class PaymentGatewayUnavailable(Exception):
+                pass
 
     Raises:
-        TypeError: `cls` isn't an `Exception` subclass, or it is a built-in one.
+        TypeError: ``cls`` isn't an ``Exception`` subclass, or it is a built-in one.
 
     """
     if not _is_exception_class(cls):
@@ -43,7 +43,7 @@ def _is_exception_class(obj: object) -> bool:
 
 
 def is_retryable(error: BaseException) -> bool:
-    """Whether the class of `error`, or one of its bases, is marked `@retryable`."""
+    """Whether the class of ``error``, or one of its bases, is marked ``@retryable``."""
     return getattr(type(error), _RETRYABLE_ATTR, False) is True
 
 
@@ -51,12 +51,12 @@ def is_retryable(error: BaseException) -> bool:
 class TransientError(Exception):
     """Base for errors that may go away on their own, so retrying makes sense.
 
-    Subclasses are retried by `RetryBehavior`, like any exception marked `@retryable`.
+    Subclasses are retried by ``RetryBehavior``, like any exception marked ``@retryable``.
 
     Example:
-        ```python
-        class RateLimited(TransientError):
-            pass
-        ```
+        .. code-block:: python
+
+            class RateLimited(TransientError):
+                pass
 
     """

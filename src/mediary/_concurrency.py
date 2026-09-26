@@ -1,7 +1,7 @@
 """Sleeping, timeouts and task groups on the running event loop: asyncio, or AnyIO's backends.
 
 Under asyncio these use the standard library alone. Under any other event loop, such as trio,
-they use AnyIO, which the `mediary[anyio]` extra installs.
+they use AnyIO, which the ``mediary[anyio]`` extra installs.
 """
 
 import asyncio
@@ -41,7 +41,7 @@ def _anyio() -> Any:
 
 
 async def sleep(seconds: float) -> None:
-    """Sleep for `seconds` on the running event loop."""
+    """Sleep for ``seconds`` on the running event loop."""
     if _on_asyncio():
         await asyncio.sleep(seconds)
     else:
@@ -49,13 +49,13 @@ async def sleep(seconds: float) -> None:
 
 
 class Expired(Exception):
-    """The time limit of `within` ran out, and the awaited work was cancelled."""
+    """The time limit of ``within`` ran out, and the awaited work was cancelled."""
 
 
 async def within(seconds: float, work: Callable[[], Awaitable[_T]]) -> _T:
-    """Return `await work()`, or cancel it and raise `Expired` after `seconds`.
+    """Return ``await work()``, or cancel it and raise ``Expired`` after ``seconds``.
 
-    A `TimeoutError` raised by `work` itself propagates unchanged.
+    A ``TimeoutError`` raised by ``work`` itself propagates unchanged.
     """
     if _on_asyncio():
         deadline = asyncio.timeout(seconds)
@@ -72,7 +72,7 @@ async def within(seconds: float, work: Callable[[], Awaitable[_T]]) -> _T:
 
 
 async def run_all(jobs: Sequence[Callable[[], Awaitable[object]]]) -> list[Exception | None]:
-    """Run `jobs` concurrently until all of them finish; return each one's error, or None."""
+    """Run ``jobs`` concurrently until all of them finish; return each one's error, or None."""
     errors: list[Exception | None] = [None] * len(jobs)
 
     async def run(index: int) -> None:

@@ -1,4 +1,4 @@
-"""The exceptions mediary raises. All of them derive from `MediaryError`."""
+"""The exceptions mediary raises. All of them derive from ``MediaryError``."""
 
 from collections.abc import Sequence
 
@@ -47,7 +47,7 @@ class NotARequest(MediaryError, TypeError):
 
 
 class NotANotification(MediaryError, TypeError):
-    """An object whose class isn't decorated with `@notification` was published."""
+    """An object whose class isn't decorated with ``@notification`` was published."""
 
     def __init__(self, cls: type) -> None:
         self.cls = cls
@@ -83,7 +83,7 @@ class RuleViolation(MediaryError, TypeError):
 
 
 class HandlerTimeout(MediaryError, TimeoutError):
-    """A `TimeoutBehavior` gave up waiting for the rest of the pipeline."""
+    """A ``TimeoutBehavior`` gave up waiting for the rest of the pipeline."""
 
     def __init__(self, message_type: type, seconds: float) -> None:
         self.message_type = message_type
@@ -92,7 +92,7 @@ class HandlerTimeout(MediaryError, TimeoutError):
 
 
 class ScanError(MediaryError):
-    """`Mediator.scan` found problems; `errors` holds every one of them.
+    """``Mediator.scan`` found problems; ``errors`` holds every one of them.
 
     Nothing from the failed scan is registered.
     """

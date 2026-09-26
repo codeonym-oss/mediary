@@ -1,21 +1,21 @@
-"""Resolve handlers and their dependencies with dishka: `pip install mediary[dishka]`.
+"""Resolve handlers and their dependencies with dishka: ``pip install mediary[dishka]``.
 
-`MediaryProvider` provides every handler and behavior class of a mediator to dishka, and in
-each scope a `Mediator` that resolves from that scope's container. Handlers then get their
+``MediaryProvider`` provides every handler and behavior class of a mediator to dishka, and in
+each scope a ``Mediator`` that resolves from that scope's container. Handlers then get their
 dependencies from dishka, including request-scoped ones such as a database session. With
-dishka's FastAPI integration, endpoints take one as `mediator: FromDishka[Mediator]`.
+dishka's FastAPI integration, endpoints take one as ``mediator: FromDishka[Mediator]``.
 
 Example:
-    ```python
-    mediator = Mediator()
-    mediator.scan("app")  # before making the container, so it provides every handler
+    .. code-block:: python
 
-    container = make_async_container(AppProvider(), MediaryProvider(mediator))
+        mediator = Mediator()
+        mediator.scan("app")  # before making the container, so it provides every handler
 
-    async with container() as request_container:  # Scope.REQUEST
-        scoped = await request_container.get(Mediator)
-        await scoped.send(PlaceOrder("book", 1))
-    ```
+        container = make_async_container(AppProvider(), MediaryProvider(mediator))
+
+        async with container() as request_container:  # Scope.REQUEST
+            scoped = await request_container.get(Mediator)
+            await scoped.send(PlaceOrder("book", 1))
 
 """
 
@@ -32,37 +32,37 @@ _T = TypeVar("_T")
 
 
 class DishkaResolver:
-    """A `Resolver` that gets every type from a dishka container, async or sync.
+    """A ``Resolver`` that gets every type from a dishka container, async or sync.
 
-    Prefer `MediaryProvider`, which makes one per scope; use this directly to resolve from a
-    container of your own, as in `mediator.with_resolver(DishkaResolver(container))`.
+    Prefer ``MediaryProvider``, which makes one per scope; use this directly to resolve from a
+    container of your own, as in ``mediator.with_resolver(DishkaResolver(container))``.
     """
 
     def __init__(self, container: AsyncContainer | Container) -> None:
-        """Resolve from `container`."""
+        """Resolve from ``container``."""
         self.container = container
 
     def resolve(self, cls: type[_T], /) -> Any:
-        """Return `container.get(cls)`: an awaitable for an async container."""
+        """Return ``container.get(cls)``: an awaitable for an async container."""
         return self.container.get(cls)
 
 
 class MediaryProvider(Provider):
-    """Provides `mediator`'s handler and behavior classes, and a `Mediator` for each scope.
+    """Provides ``mediator``'s handler and behavior classes, and a ``Mediator`` for each scope.
 
-    In `scope` (by default `Scope.REQUEST`), the container provides a view of `mediator`
-    (see `Mediator.with_resolver`) that resolves from that scope's container, as `Mediator`,
-    `CommandSender`, `QuerySender` and the mediator's own class.
+    In ``scope`` (by default ``Scope.REQUEST``), the container provides a view of ``mediator``
+    (see ``Mediator.with_resolver``) that resolves from that scope's container, as ``Mediator``,
+    ``CommandSender``, ``QuerySender`` and the mediator's own class.
 
     Handler and behavior classes are provided with their constructor dependencies resolved by
-    dishka: transient ones in `scope` and uncached, so each send gets a new instance, and
-    singleton handlers once, in `Scope.APP`. Only classes registered before the provider is
+    dishka: transient ones in ``scope`` and uncached, so each send gets a new instance, and
+    singleton handlers once, in ``Scope.APP``. Only classes registered before the provider is
     made are provided, so scan first. Provide a class yourself, in a provider listed after
-    this one, to override it. It needs an async container (`make_async_container`).
+    this one, to override it. It needs an async container (``make_async_container``).
     """
 
     def __init__(self, mediator: Mediator, *, scope: BaseScope = Scope.REQUEST) -> None:
-        """Provide the classes of `mediator`, and views of it in `scope`."""
+        """Provide the classes of ``mediator``, and views of it in ``scope``."""
         super().__init__()
         for cls, lifetime in registered_classes(mediator):
             if lifetime == "singleton":

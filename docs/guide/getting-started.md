@@ -12,7 +12,8 @@ mediary needs Python 3.11 or later and has no dependencies. Handlers are `async`
 
 A **request** is a message that asks for something and gets one result back. Declare it as any class — a dataclass, a Pydantic model, an attrs class — decorated with `@request`, and say what its handler returns with `Returns[...]`:
 
-```python title="shop/orders.py"
+```{code-block} python
+:caption: shop/orders.py
 from dataclasses import dataclass
 
 from mediary import Returns, handler, request
@@ -50,14 +51,17 @@ assert order_id == 42
 
 `send` is typed from the request's `Returns[...]`: type checkers know `order_id` is an `int`. The code that sends `PlaceOrder` never imports its handler, so either can change without the other.
 
-!!! note "Top-level `await`"
-    The examples use top-level `await`, as in `python -m asyncio` or a notebook. In an app, they live inside `async def`s.
+:::{admonition} Top-level `await`
+:class: note
+The examples use top-level `await`, as in `python -m asyncio` or a notebook. In an app, they live inside `async def`s.
+:::
 
 ## Function handlers
 
 A handler can be an async function too. Its first parameter is the request; the others are [dependencies](dependency-injection.md), resolved by type hint:
 
-```python title="shop/users.py"
+```{code-block} python
+:caption: shop/users.py
 from dataclasses import dataclass
 
 from mediary import Returns, handler, request
@@ -88,7 +92,8 @@ To serve a request other than the one the parameter is hinted with — a base cl
 
 Scanning is all or nothing. It reports every problem it finds — a handler without a request hint, two handlers for one request, a module that fails to import — together, in one `ScanError`, and registers nothing:
 
-```python title="broken/handlers.py"
+```{code-block} python
+:caption: broken/handlers.py
 from mediary import Returns, handler, request
 
 

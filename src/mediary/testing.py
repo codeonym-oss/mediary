@@ -1,20 +1,20 @@
 """Test helpers: a mediator that records what it sends, publishes and streams, with stubs.
 
-`RecordingMediator` is a `Mediator`, so the code under test uses it unchanged. Like any new
+``RecordingMediator`` is a ``Mediator``, so the code under test uses it unchanged. Like any new
 mediator it starts empty and isolated: nothing is scanned, and nothing is shared with other
 mediators, so each test registers only what it needs. With mediary installed, pytest provides
-a fresh one as the `mediator` fixture.
+a fresh one as the ``mediator`` fixture.
 
 Example:
-    ```python
-    async def test_registering_welcomes_the_user(mediator: RecordingMediator) -> None:
-        mediator.register(Register, register_user)
-        mediator.stub(GetPlan, Plan.FREE)
+    .. code-block:: python
 
-        await mediator.send(Register("ada@example.com"))
+        async def test_registering_welcomes_the_user(mediator: RecordingMediator) -> None:
+            mediator.register(Register, register_user)
+            mediator.stub(GetPlan, Plan.FREE)
 
-        assert mediator.published_of(Welcomed) == [Welcomed("ada@example.com")]
-    ```
+            await mediator.send(Register("ada@example.com"))
+
+            assert mediator.published_of(Welcomed) == [Welcomed("ada@example.com")]
 
 """
 
@@ -37,9 +37,9 @@ _R = TypeVar("_R")
 
 
 class RecordingMediator(Mediator):
-    """A `Mediator` that records every message, and can answer requests without a handler.
+    """A ``Mediator`` that records every message, and can answer requests without a handler.
 
-    `sent`, `published` and `streamed` list the messages in the order they were sent,
+    ``sent``, ``published`` and ``streamed`` list the messages in the order they were sent,
     published or streamed, including those sent by handlers, and including ones that failed.
     A stubbed request type is answered by its stub in place of a handler; behaviors still
     wrap it.
@@ -51,7 +51,7 @@ class RecordingMediator(Mediator):
         resolver: Resolver | None = None,
         publish_strategy: PublishStrategy | None = None,
     ) -> None:
-        """Create an empty mediator; the arguments are those of `Mediator`."""
+        """Create an empty mediator; the arguments are those of ``Mediator``."""
         super().__init__(resolver=resolver, publish_strategy=publish_strategy)
         self.sent: list[object] = []
         self.published: list[object] = []
@@ -70,11 +70,11 @@ class RecordingMediator(Mediator):
     def stub(
         self, request_type: type[object], result: Any = None, /, *, raises: Exception | None = None
     ) -> None:
-        """Answer every `request_type` sent with `result`, or fail it with `raises`.
+        """Answer every ``request_type`` sent with ``result``, or fail it with ``raises``.
 
-        For a stream request, `result` is the items to yield, and `raises` fails the stream
+        For a stream request, ``result`` is the items to yield, and ``raises`` fails the stream
         when it is first iterated. The stub stands in for the handler: one registered for
-        `request_type` isn't called. Stubbing a type again replaces its stub.
+        ``request_type`` isn't called. Stubbing a type again replaces its stub.
         """
         kind = kind_of(request_type)
         if kind is not None and kind.dispatch == "stream":
@@ -104,7 +104,7 @@ class RecordingMediator(Mediator):
     @overload
     async def send(self, request: object, /) -> Any: ...
     async def send(self, request: object, /) -> Any:
-        """Record `request`, then answer it with its stub or send it to its handler."""
+        """Record ``request``, then answer it with its stub or send it to its handler."""
         self.sent.append(request)
         stub = self._stubs.get(type(request))
         if stub is None:
@@ -114,7 +114,7 @@ class RecordingMediator(Mediator):
     async def publish(
         self, notification: object, /, *, strategy: PublishStrategy | None = None
     ) -> None:
-        """Record `notification`, then publish it to its handlers."""
+        """Record ``notification``, then publish it to its handlers."""
         self.published.append(notification)
         await super().publish(notification, strategy=strategy)
 
@@ -123,7 +123,7 @@ class RecordingMediator(Mediator):
     @overload
     def stream(self, request: object, /) -> Stream[Any]: ...
     def stream(self, request: object, /) -> Stream[Any]:
-        """Record `request`, then stream the items of its stub or of its handler."""
+        """Record ``request``, then stream the items of its stub or of its handler."""
         self.streamed.append(request)
         stub = self._stream_stubs.get(type(request))
         if stub is None:
@@ -131,13 +131,13 @@ class RecordingMediator(Mediator):
         return self._through_stream(request, stub)
 
     def sent_of(self, request_type: type[_T]) -> list[_T]:
-        """Return the sent requests of exactly `request_type`, in order."""
+        """Return the sent requests of exactly ``request_type``, in order."""
         return [r for r in self.sent if type(r) is request_type]
 
     def published_of(self, notification_type: type[_T]) -> list[_T]:
-        """Return the published notifications of exactly `notification_type`, in order."""
+        """Return the published notifications of exactly ``notification_type``, in order."""
         return [n for n in self.published if type(n) is notification_type]
 
     def streamed_of(self, request_type: type[_T]) -> list[_T]:
-        """Return the streamed requests of exactly `request_type`, in order."""
+        """Return the streamed requests of exactly ``request_type``, in order."""
         return [r for r in self.streamed if type(r) is request_type]

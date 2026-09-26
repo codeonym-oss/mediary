@@ -1,4 +1,4 @@
-"""Streams: what `Mediator.stream` returns, and how a stream's pipeline is layered."""
+"""Streams: what ``Mediator.stream`` returns, and how a stream's pipeline is layered."""
 
 from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable
 from contextlib import aclosing
@@ -17,24 +17,25 @@ class Stream(AsyncIterator[_T_co]):
     Nothing runs until the first item is asked for: the handler is resolved and started then,
     and each further item is produced when the consumer asks for it.
 
-    Iterate it once, with `async for`. To close the pipeline as soon as you stop, for instance
-    after a `break` or an error, iterate it inside `async with`; this runs the `finally` blocks
-    of its behaviors and handler at once, rather than whenever the stream is garbage-collected.
+    Iterate it once, with ``async for``. To close the pipeline as soon as you stop, for
+    instance after a ``break`` or an error, iterate it inside ``async with``; this runs the
+    ``finally`` blocks of its behaviors and handler at once, rather than whenever the stream is
+    garbage-collected.
 
     Example:
-        ```python
-        async with mediator.stream(ExportOrders(since)) as orders:
-            async for order in orders:
-                if order.total > limit:
-                    break  # the handler's cursor is closed when the block exits
-        ```
+        .. code-block:: python
+
+            async with mediator.stream(ExportOrders(since)) as orders:
+                async for order in orders:
+                    if order.total > limit:
+                        break  # the handler's cursor is closed when the block exits
 
     """
 
     __slots__ = ("_items",)
 
     def __init__(self, items: AsyncGenerator[_T_co, None]) -> None:
-        """Wrap `items`, the outermost layer of the stream's pipeline."""
+        """Wrap ``items``, the outermost layer of the stream's pipeline."""
         self._items = items
 
     def __aiter__(self) -> "Stream[_T_co]":
@@ -42,7 +43,7 @@ class Stream(AsyncIterator[_T_co]):
         return self
 
     async def __anext__(self) -> _T_co:
-        """Return the next item, or raise `StopAsyncIteration` when the stream is done."""
+        """Return the next item, or raise ``StopAsyncIteration`` when the stream is done."""
         return await self._items.__anext__()
 
     async def aclose(self) -> None:
@@ -66,7 +67,7 @@ class Stream(AsyncIterator[_T_co]):
 async def through(
     start: Callable[[], Awaitable[AsyncGenerator[Any, None]]],
 ) -> AsyncGenerator[Any, None]:
-    """Yield the items of the generator `start()` returns, closing it when this closes."""
+    """Yield the items of the generator ``start()`` returns, closing it when this closes."""
     async with aclosing(await start()) as items:
         async for item in items:
             yield item
@@ -75,10 +76,10 @@ async def through(
 async def layer(
     start: Callable[[Open], Awaitable[AsyncGenerator[Any, None]]], inner: Open
 ) -> AsyncGenerator[Any, None]:
-    """Yield the items of a behavior started with `next`, which opens the `inner` layer.
+    """Yield the items of a behavior started with ``next``, which opens the ``inner`` layer.
 
     Every inner layer the behavior opens is closed when this closes, so closing the outermost
-    layer closes the whole pipeline, however the behavior uses `next`.
+    layer closes the whole pipeline, however the behavior uses ``next``.
     """
     opened: list[AsyncGenerator[Any, None]] = []
 

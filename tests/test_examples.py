@@ -1,10 +1,11 @@
 """Run the Python examples of the README and of each docs page, a page at a time.
 
 A page's examples run in order, as one program. A block preceded by `<!-- file: pkg/mod.py -->`,
-or whose fence has a `title="pkg/mod.py"`, is written to that path, on sys.path, before
-anything runs. The other blocks run in one shared module, with top-level `await`, and any
-`test_*` function a block defines is called with a fresh `RecordingMediator`. A block preceded
-by `<!-- requires: module,... -->` runs only when those modules (extras) are installed.
+or a MyST `{code-block} python` with a `:caption: pkg/mod.py`, is written to that path, on
+sys.path, before anything runs. The other blocks run in one shared module, with top-level
+`await`, and any `test_*` function a block defines is called with a fresh `RecordingMediator`.
+A block preceded by `<!-- requires: module,... -->` runs only when those modules (extras) are
+installed.
 """
 
 import ast
@@ -24,7 +25,7 @@ ROOT = Path(__file__).parent.parent
 PAGES = [ROOT / "README.md", *sorted((ROOT / "docs").rglob("*.md"))]
 BLOCK = re.compile(
     r"(?:<!-- (?P<directive>file|requires): (?P<arg>\S+) -->\n)?"
-    r'```python(?: title="(?P<title>[^"]+)")?\n(?P<code>.*?)^```',
+    r"```(?:python|\{code-block\} python\n:caption: (?P<title>\S+))\n(?P<code>.*?)^```",
     re.S | re.M,
 )
 

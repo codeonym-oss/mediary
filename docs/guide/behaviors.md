@@ -6,7 +6,8 @@ A **behavior** wraps handlers like middleware. It gets the message and `next`, w
 
 A behavior is an async function, or a class with an async `handle`, taking the message and `next`:
 
-```python title="shop/orders.py"
+```{code-block} python
+:caption: shop/orders.py
 from dataclasses import dataclass
 
 from mediary import Returns, handler, request

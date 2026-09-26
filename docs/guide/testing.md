@@ -6,7 +6,8 @@ Handlers are plain classes and functions: test them by calling them. For code th
 
 `RecordingMediator` is a `Mediator` that records what it sends, publishes and streams, and can answer requests with stubs. With mediary installed, pytest provides a fresh one to every test that asks for `mediator`:
 
-```python title="shop/orders.py"
+```{code-block} python
+:caption: shop/orders.py
 from dataclasses import dataclass
 
 from mediary import Mediator, Returns, notification, request

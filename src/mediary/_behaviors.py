@@ -23,51 +23,51 @@ NextStream: TypeAlias = Callable[[], AsyncIterator[_R]]
 
 
 class Behavior(Protocol[_Req_contra, _R]):
-    """The shape of a class behavior: an async `handle` taking the request and `next`.
+    """The shape of a class behavior: an async ``handle`` taking the request and ``next``.
 
-    A behavior runs code around the rest of the pipeline. It may call `next()` any number of
+    A behavior runs code around the rest of the pipeline. It may call ``next()`` any number of
     times (zero to short-circuit, more to retry) and may change the result.
 
     Example:
-        ```python
-        class Timing:
-            async def handle(self, request: object, next: Next[T]) -> T:
-                started = time.perf_counter()
-                try:
-                    return await next()
-                finally:
-                    log(type(request), time.perf_counter() - started)
-        ```
+        .. code-block:: python
+
+            class Timing:
+                async def handle(self, request: object, next: Next[T]) -> T:
+                    started = time.perf_counter()
+                    try:
+                        return await next()
+                    finally:
+                        log(type(request), time.perf_counter() - started)
 
     """
 
     async def handle(self, request: _Req_contra, next: Next[_R], /) -> _R:
-        """Handle `request`, usually by awaiting `next()`."""
+        """Handle ``request``, usually by awaiting ``next()``."""
         ...
 
 
 class StreamBehavior(Protocol[_Req_contra, _R]):
-    """The shape of a class behavior around stream requests: `handle` is an async generator.
+    """The shape of a class behavior around stream requests: ``handle`` is an async generator.
 
-    It yields the items of the rest of the pipeline, which it opens by calling `next()`. It
+    It yields the items of the rest of the pipeline, which it opens by calling ``next()``. It
     may filter, transform, add or count items, and run code before and after the stream.
-    Iterators it gets from `next()` are closed when it is, even if it doesn't close them.
+    Iterators it gets from ``next()`` are closed when it is, even if it doesn't close them.
 
     Example:
-        ```python
-        class Counting:
-            async def handle(self, request: object, next: NextStream[T]) -> AsyncIterator[T]:
-                count = 0
-                async for item in next():
-                    count += 1
-                    yield item
-                log(type(request), count)
-        ```
+        .. code-block:: python
+
+            class Counting:
+                async def handle(self, request: object, next: NextStream[T]) -> AsyncIterator[T]:
+                    count = 0
+                    async for item in next():
+                        count += 1
+                        yield item
+                    log(type(request), count)
 
     """
 
     def handle(self, request: _Req_contra, next: NextStream[_R], /) -> AsyncIterator[_R]:
-        """Yield the items of `request`, usually those of `next()`."""
+        """Yield the items of ``request``, usually those of ``next()``."""
         ...
 
 
@@ -86,33 +86,33 @@ def behavior(target: _Fn, /) -> _Fn: ...
 @overload
 def behavior(*, order: int = 0, kinds: Iterable[str] | None = None) -> Callable[[_Any], _Any]: ...
 def behavior(target: Any = None, /, *, order: int = 0, kinds: Iterable[str] | None = None) -> Any:
-    """Mark a class or async function as a pipeline behavior, so `Mediator.scan` adds it.
+    """Mark a class or async function as a pipeline behavior, so ``Mediator.scan`` adds it.
 
     A behavior wraps the requests its request parameter's hint matches: every request when the
-    hint is missing, `object` or `Any`; subclasses of a class; classes that have every member
-    of a Protocol; or any member of a union. `kinds` further limits it to requests whose
-    decorator has one of those kinds, such as `{"request"}`.
+    hint is missing, ``object`` or ``Any``; subclasses of a class; classes that have every member
+    of a Protocol; or any member of a union. ``kinds`` further limits it to requests whose
+    decorator has one of those kinds, such as ``{"request"}``.
 
-    A behavior whose `handle` (or the function itself) is an async generator is a stream
-    behavior: it wraps only stream requests, and gets `next` as a `NextStream`. Every other
+    A behavior whose ``handle`` (or the function itself) is an async generator is a stream
+    behavior: it wraps only stream requests, and gets ``next`` as a ``NextStream``. Every other
     behavior wraps only the requests and notifications that are sent or published.
 
-    Behaviors with a lower `order` run outside those with a higher one; ties are ordered by
-    fully qualified name. A class behavior is resolved through the `Resolver` for every send.
-    A function behavior's parameters after `next` are resolved by their type hints.
+    Behaviors with a lower ``order`` run outside those with a higher one; ties are ordered by
+    fully qualified name. A class behavior is resolved through the ``Resolver`` for every send.
+    A function behavior's parameters after ``next`` are resolved by their type hints.
 
     Example:
-        ```python
-        @behavior(order=-10)
-        class Logging:
-            async def handle(self, request: object, next: Next[T]) -> T: ...
+        .. code-block:: python
 
-        @behavior(kinds={"request"})
-        async def in_transaction(request: object, next: Next[T], db: Database) -> T: ...
-        ```
+            @behavior(order=-10)
+            class Logging:
+                async def handle(self, request: object, next: Next[T]) -> T: ...
+
+            @behavior(kinds={"request"})
+            async def in_transaction(request: object, next: Next[T], db: Database) -> T: ...
 
     Raises:
-        TypeError: `kinds` is a single string rather than a collection of them.
+        TypeError: ``kinds`` is a single string rather than a collection of them.
 
     """
     marker = Marker(kind="behavior", order=order, kinds=_kinds(kinds))
@@ -132,14 +132,14 @@ def _kinds(kinds: Iterable[str] | None) -> frozenset[str] | None:
 
 
 InvokeBehavior = Callable[[Any, Any, Resolver], Awaitable[Any]]
-"""Calls a behavior with `(request, next, resolver)`; a stream behavior's returns an iterator."""
+"""Calls a behavior with ``(request, next, resolver)``; a stream behavior's returns an iterator."""
 
 
 @dataclass(frozen=True, slots=True)
 class BehaviorBinding:
     """A behavior with its pipeline position, what it wraps, and how to call it.
 
-    A behavior that `streams` is an async generator: `invoke` returns its (unstarted) iterator.
+    A behavior that ``streams`` is an async generator: ``invoke`` returns its (unstarted) iterator.
     """
 
     source: Any
@@ -151,7 +151,7 @@ class BehaviorBinding:
     streams: bool = False
 
     def wraps(self, request_type: type) -> bool:
-        """Whether this behavior belongs in the pipeline of `request_type`."""
+        """Whether this behavior belongs in the pipeline of ``request_type``."""
         kind = kind_of(request_type)
         if self.streams != (kind is not None and kind.dispatch == "stream"):
             return False
@@ -165,13 +165,13 @@ class BehaviorBinding:
 def bind_behavior(
     source: Any, *, order: int | None = None, kinds: Iterable[str] | None = None
 ) -> BehaviorBinding:
-    """Bind a behavior class, function or instance; `order` and `kinds` override its decorator's.
+    """Bind a behavior class, function or instance; ``order`` and ``kinds`` override the decorator.
 
-    A class is resolved through the `Resolver` on every call; an instance is used as it is.
+    A class is resolved through the ``Resolver`` on every call; an instance is used as it is.
 
     Raises:
         InvalidBehaviorSignature: it isn't an async function, or a class or instance with an
-            async `handle` taking `(request, next)`, or its hints are unresolvable or target no
+            async ``handle`` taking ``(request, next)``, or its hints are unresolvable or target no
             class.
 
     """
@@ -214,7 +214,7 @@ def bind_behavior(
 def pipeline(
     behaviors: Iterable[BehaviorBinding], request_type: type
 ) -> tuple[BehaviorBinding, ...]:
-    """Return the behaviors wrapping `request_type`, outermost first."""
+    """Return the behaviors wrapping ``request_type``, outermost first."""
     wrapping = (b for b in behaviors if b.wraps(request_type))
     return tuple(sorted(wrapping, key=lambda b: (b.order, b.name)))
 
@@ -248,7 +248,7 @@ def _protocol_members(protocol: type) -> frozenset[str]:
 
 
 def _attributes(cls: type) -> frozenset[str]:
-    """Return the attribute names of `cls` instances: class attributes and annotated fields."""
+    """Return the attribute names of ``cls`` instances: class attributes and annotated fields."""
     names = set(dir(cls))
     for klass in cls.__mro__:
         names.update(_annotation_names(klass))

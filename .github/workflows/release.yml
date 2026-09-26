@@ -5,9 +5,7 @@ name: release
 #   - When that PR is merged, it tags vX.Y.Z and creates the GitHub release; this run then builds
 #     and publishes the release to PyPI (environment `pypi`, needs a maintainer's approval).
 #   - Otherwise it publishes a X.Y.(Z+1).devN build to TestPyPI (environment `testpypi`).
-#   - Either way it deploys the docs to GitHub Pages (the gh-pages branch), with mike: a
-#     release as its X.Y version, aliased `latest` and made the default; otherwise as `dev`,
-#     the docs of main, which is the default only until the first release.
+# The docs deploy on Read the Docs, from its own webhook (see .readthedocs.yaml).
 # Publishing lives here because tags/releases created with GITHUB_TOKEN don't trigger other
 # workflows. PyPI and TestPyPI trust this file name and these environment names (Trusted
 # Publishing, OIDC): don't rename them without updating the publishers on PyPI.
@@ -84,36 +82,3 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
         with:
           repository-url: https://test.pypi.org/legacy/
-
-  docs:
-    needs: release-please
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write # push to gh-pages
-    concurrency:
-      group: gh-pages
-      cancel-in-progress: false
-    env:
-      NO_MKDOCS_2_WARNING: "1"
-      TAG: ${{ needs.release-please.outputs.release_created == 'true' && needs.release-please.outputs.tag_name || '' }}
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: ${{ env.TAG || github.sha }}
-          fetch-depth: 0 # mike commits to gh-pages on top of its history
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
-      - run: uv sync --frozen --no-default-groups --group docs
-      - name: Deploy with mike
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin gh-pages:gh-pages || true
-          mike() { uv run --frozen --no-sync mike "$@"; }
-          if [[ -n "$TAG" ]]; then
-            version=$(echo "${TAG#v}" | cut -d. -f1,2)
-            mike deploy --push --update-aliases "$version" latest
-            mike set-default --push latest
-          else
-            mike deploy --push --title "dev (main)" dev
-            mike list latest >/dev/null 2>&1 || mike set-default --push dev
-          fi

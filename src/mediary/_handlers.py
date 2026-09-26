@@ -1,4 +1,4 @@
-"""Handlers: their shape, the `@handler` decorator, and binding one to its request."""
+"""Handlers: their shape, the ``@handler`` decorator, and binding one to its request."""
 
 import inspect
 from collections.abc import AsyncIterator, Awaitable, Callable
@@ -16,38 +16,38 @@ _LIFETIMES = get_args(Lifetime)
 
 
 class Handler(Protocol[_Req_contra, _Res_co]):
-    """The shape of a class handler: any class with an async `handle` taking the request.
+    """The shape of a class handler: any class with an async ``handle`` taking the request.
 
     No base class is needed; type checkers match handlers structurally.
 
     Example:
-        ```python
-        class GetUserHandler:
-            async def handle(self, request: GetUser) -> User: ...
-        ```
+        .. code-block:: python
+
+            class GetUserHandler:
+                async def handle(self, request: GetUser) -> User: ...
 
     """
 
     async def handle(self, request: _Req_contra, /) -> _Res_co:
-        """Handle `request` and return its result."""
+        """Handle ``request`` and return its result."""
         ...
 
 
 class StreamHandler(Protocol[_Req_contra, _Res_co]):
-    """The shape of a class handler for a stream request: `handle` is an async generator.
+    """The shape of a class handler for a stream request: ``handle`` is an async generator.
 
     Example:
-        ```python
-        class ExportOrdersHandler:
-            async def handle(self, request: ExportOrders) -> AsyncIterator[Order]:
-                async for order in self.repo.since(request.since):
-                    yield order
-        ```
+        .. code-block:: python
+
+            class ExportOrdersHandler:
+                async def handle(self, request: ExportOrders) -> AsyncIterator[Order]:
+                    async for order in self.repo.since(request.since):
+                        yield order
 
     """
 
     def handle(self, request: _Req_contra, /) -> AsyncIterator[_Res_co]:
-        """Yield the items of `request`."""
+        """Yield the items of ``request``."""
         ...
 
 
@@ -68,36 +68,36 @@ def handler(
     request_type: type[object] | None = None, /, *, lifetime: Lifetime = "transient"
 ) -> Callable[[_Any], _Any]: ...
 def handler(target: Any = None, /, *, lifetime: Lifetime = "transient") -> Any:
-    """Mark a class or async function as a handler, so `Mediator.scan` finds and registers it.
+    """Mark a class or async function as a handler, so ``Mediator.scan`` finds and registers it.
 
     Used bare, the handler serves the request named by the type hint of its request parameter:
-    the first parameter of a function, or of a class's `handle` after `self`. Given a request
+    the first parameter of a function, or of a class's ``handle`` after ``self``. Given a request
     type, it serves that request whatever the hint says.
 
-    A class handler is resolved through the mediator's `Resolver` for every send, or only once
-    with `lifetime="singleton"`. A function handler's parameters after the request are resolved
-    through the `Resolver` by their type hints on every send. The handler of a stream request is
-    an async generator (a function, or a class's `handle`) that yields its items.
+    A class handler is resolved through the mediator's ``Resolver`` for every send, or only once
+    with ``lifetime="singleton"``. A function handler's parameters after the request are resolved
+    through the ``Resolver`` by their type hints on every send. The handler of a stream request is
+    an async generator (a function, or a class's ``handle``) that yields its items.
 
     Example:
-        ```python
-        @handler
-        class GetUserHandler:
-            async def handle(self, request: GetUser) -> User: ...
+        .. code-block:: python
 
-        @handler(lifetime="singleton")
-        class CachedGetUserHandler: ...
+            @handler
+            class GetUserHandler:
+                async def handle(self, request: GetUser) -> User: ...
 
-        @handler
-        async def delete_user(request: DeleteUser, repo: UserRepository) -> None: ...
+            @handler(lifetime="singleton")
+            class CachedGetUserHandler: ...
 
-        @handler
-        async def export_orders(request: ExportOrders) -> AsyncIterator[Order]:
-            yield ...
-        ```
+            @handler
+            async def delete_user(request: DeleteUser, repo: UserRepository) -> None: ...
+
+            @handler
+            async def export_orders(request: ExportOrders) -> AsyncIterator[Order]:
+                yield ...
 
     Raises:
-        ValueError: `lifetime` is not "transient" or "singleton".
+        ValueError: ``lifetime`` is not "transient" or "singleton".
 
     """
     if lifetime not in _LIFETIMES:
@@ -118,8 +118,8 @@ Invoke = Callable[[Any, Resolver], Awaitable[Any]]
 class Binding:
     """A handler bound to its request type, with how to call it for a request.
 
-    `returns` is the handler's resolved return hint, or `inspect.Signature.empty`. A handler
-    that `streams` is an async generator: `invoke` returns its (unstarted) iterator.
+    ``returns`` is the handler's resolved return hint, or ``inspect.Signature.empty``. A handler
+    that ``streams`` is an async generator: ``invoke`` returns its (unstarted) iterator.
     """
 
     request_type: type
@@ -132,13 +132,13 @@ class Binding:
 def bind(source: Any, request_type: type | None = None) -> Binding:
     """Bind a handler class or function to the request it serves.
 
-    The request type is `request_type`, else the one given to `@handler(...)`, else the type
+    The request type is ``request_type``, else the one given to ``@handler(...)``, else the type
     hint of the request parameter. Forward references and deferred annotations resolve against
     the handler's module.
 
     Raises:
         InvalidHandlerSignature: the handler isn't an async function or a class with an async
-            `handle`, or a hint it needs is missing, unresolvable or (for the request) not a
+            ``handle``, or a hint it needs is missing, unresolvable or (for the request) not a
             single class.
 
     """

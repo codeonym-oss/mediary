@@ -12,7 +12,8 @@ It ships with mediary; nothing extra to install.
 
 ## Commands, queries and events
 
-```python title="users/model.py"
+```{code-block} python
+:caption: users/model.py
 from dataclasses import dataclass
 
 from mediary import handler

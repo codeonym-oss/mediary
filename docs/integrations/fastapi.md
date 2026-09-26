@@ -12,7 +12,8 @@ Already using [dishka](dishka.md)? Use its FastAPI integration instead, for requ
 
 `setup_mediary` attaches a mediator to the app, and endpoints take `MediatorDep`:
 
-```python title="shop/stock.py"
+```{code-block} python
+:caption: shop/stock.py
 from dataclasses import dataclass
 
 from mediary import Returns, handler, request

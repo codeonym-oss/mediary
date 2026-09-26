@@ -13,7 +13,7 @@ def discover(
 ) -> tuple[list[object], list[Exception]]:
     """Import each root and all its submodules; return what they define, and any import errors.
 
-    What is collected: the module-level classes and functions whose marker kind is in `kinds`.
+    What is collected: the module-level classes and functions whose marker kind is in ``kinds``.
     Each is collected from the module that defines it, so re-exports don't repeat it.
     Modules are visited in a stable order: each root, then its submodules sorted by name.
     """

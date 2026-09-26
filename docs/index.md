@@ -4,7 +4,8 @@ Typed, decorator-driven mediator + CQRS for Python — handlers, pipelines and n
 
 A mediator decouples the code that asks for something from the code that does it. Callers send messages — a request, a command, a query, a notification — and never import their handlers; cross-cutting concerns such as logging, retries, validation and transactions wrap every handler as a pipeline of behaviors.
 
-```python title="shop/orders.py"
+```{code-block} python
+:caption: shop/orders.py
 from dataclasses import dataclass
 
 from mediary import Returns, handler, request
@@ -62,3 +63,55 @@ pip install mediary[full]  # with every integration
 ## Next steps
 
 Start with [Getting started](guide/getting-started.md), or jump to the [recipes](recipes/validation.md) for common pipelines. Every example in these docs runs in CI, as written.
+
+```{toctree}
+:hidden:
+:caption: Guide
+
+guide/getting-started
+guide/dependency-injection
+guide/behaviors
+guide/notifications
+guide/streams
+guide/cqrs
+guide/custom-kinds
+guide/testing
+```
+
+```{toctree}
+:hidden:
+:caption: Integrations
+
+dishka <integrations/dishka>
+FastAPI <integrations/fastapi>
+AnyIO and trio <integrations/anyio>
+```
+
+```{toctree}
+:hidden:
+:caption: Recipes
+
+recipes/validation
+recipes/transactions
+Caching queries <recipes/caching>
+Events after commands <recipes/events>
+```
+
+```{toctree}
+:hidden:
+:caption: API reference
+
+reference/mediary
+reference/cqrs
+reference/kinds
+reference/behaviors
+reference/testing
+reference/ext-dishka
+reference/ext-fastapi
+```
+
+```{toctree}
+:hidden:
+
+changelog
+```
