@@ -54,10 +54,13 @@ jobs:
       - run: uv sync --frozen
       - run: uv run --frozen pytest
 
+  build-check:
+    uses: ./.github/workflows/build.yml
+
   # Single stable check name for the branch ruleset, independent of the matrix.
   ci-ok:
     if: always()
-    needs: [lint, typecheck, test]
+    needs: [lint, typecheck, test, build-check]
     runs-on: ubuntu-latest
     steps:
       - name: All CI jobs passed
