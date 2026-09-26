@@ -73,6 +73,15 @@ class InvalidBehaviorSignature(MediaryError, TypeError):
         super().__init__(f"Invalid behavior {_name(behavior)}: {reason}")
 
 
+class HandlerTimeout(MediaryError, TimeoutError):
+    """A `TimeoutBehavior` gave up waiting for the rest of the pipeline."""
+
+    def __init__(self, message_type: type, seconds: float) -> None:
+        self.message_type = message_type
+        self.seconds = seconds
+        super().__init__(f"{_name(message_type)} was not handled within {seconds:g}s")
+
+
 class ScanError(MediaryError):
     """`Mediator.scan` found problems; `errors` holds every one of them.
 

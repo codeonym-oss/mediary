@@ -118,41 +118,41 @@ class BehaviorBinding:
 def bind_behavior(
     source: Any, *, order: int | None = None, kinds: Iterable[str] | None = None
 ) -> BehaviorBinding:
-    """Bind a behavior class or function; `order` and `kinds` override its decorator's.
+    """Bind a behavior class, function or instance; `order` and `kinds` override its decorator's.
+
+    A class is resolved through the `Resolver` on every call; an instance is used as it is.
 
     Raises:
-        InvalidBehaviorSignature: it isn't an async function or a class with an async `handle`
-            taking `(request, next)`, or its hints are unresolvable or target no class.
+        InvalidBehaviorSignature: it isn't an async function, or a class or instance with an
+            async `handle` taking `(request, next)`, or its hints are unresolvable or target no
+            class.
 
     """
     marker = marker_of(source)
-    if isinstance(source, type):
+    leading = ("request", "next")
+    if isinstance(source, type) or (hasattr(source, "handle") and not inspect.isfunction(source)):
+        cls = source if isinstance(source, type) else type(source)
         handle = require_async(
             source,
-            getattr(source, "handle", None),
+            getattr(cls, "handle", None),
             "an `async def handle(self, request, next)`",
             InvalidBehaviorSignature,
         )
-        params = shape(
-            source, handle, leading=("request", "next"), method=True, error=InvalidBehaviorSignature
-        )
-        invoke = _class_invoker(source)
+        params = shape(source, handle, leading=leading, method=True, error=InvalidBehaviorSignature)
+        invoke = _class_invoker(source) if source is cls else _instance_invoker(source)
     else:
+        cls = source
         function = require_async(
             source, source, "to be an `async def` function or a class", InvalidBehaviorSignature
         )
         params = shape(
-            source,
-            function,
-            leading=("request", "next"),
-            method=False,
-            error=InvalidBehaviorSignature,
+            source, function, leading=leading, method=False, error=InvalidBehaviorSignature
         )
         invoke = _function_invoker(function, params)
     return BehaviorBinding(
         source=source,
         order=order if order is not None else marker.order if marker is not None else 0,
-        name=f"{source.__module__}.{source.__qualname__}",
+        name=f"{cls.__module__}.{cls.__qualname__}",
         targets=_targets(source, params),
         kinds=_kinds(kinds) if kinds is not None else marker.kinds if marker else None,
         invoke=invoke,
@@ -214,6 +214,13 @@ def _annotation_names(cls: type) -> Iterable[str]:
 def _class_invoker(cls: type) -> InvokeBehavior:
     async def invoke(request: Any, next: Next[Any], resolver: Resolver) -> Any:
         return await (await resolve(resolver, cls)).handle(request, next)
+
+    return invoke
+
+
+def _instance_invoker(instance: Any) -> InvokeBehavior:
+    async def invoke(request: Any, next: Next[Any], resolver: Resolver) -> Any:
+        return await instance.handle(request, next)
 
     return invoke
 

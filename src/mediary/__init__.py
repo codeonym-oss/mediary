@@ -6,6 +6,7 @@ from ._behaviors import Behavior, Next, behavior
 from ._errors import (
     DuplicateHandler,
     HandlerNotFound,
+    HandlerTimeout,
     InvalidBehaviorSignature,
     InvalidHandlerSignature,
     MediaryError,
@@ -27,6 +28,7 @@ __all__ = [
     "DuplicateHandler",
     "Handler",
     "HandlerNotFound",
+    "HandlerTimeout",
     "InvalidBehaviorSignature",
     "InvalidHandlerSignature",
     "MediaryError",
