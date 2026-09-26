@@ -30,6 +30,9 @@ Repository = "https://github.com/codeonym-oss/mediary"
 Issues = "https://github.com/codeonym-oss/mediary/issues"
 Changelog = "https://github.com/codeonym-oss/mediary/blob/main/CHANGELOG.md"
 
+[project.entry-points.pytest11]
+mediary = "mediary.pytest_plugin"
+
 [build-system]
 requires = ["uv_build>=0.8.22,<0.13"]
 build-backend = "uv_build"
@@ -76,7 +79,12 @@ typeCheckingMode = "strict"
 reportUnnecessaryTypeIgnoreComment = "error"
 
 [tool.pytest.ini_options]
-addopts = ["--strict-markers", "--strict-config", "-ra", "--cov", "--cov-report=term-missing"]
+# `-p no:mediary` stops our own entry-point plugin from importing mediary before coverage
+# starts; tests/conftest.py loads it by module name instead.
+addopts = [
+    "--strict-markers", "--strict-config", "-ra", "--cov", "--cov-report=term-missing",
+    "-p", "no:mediary",
+]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
