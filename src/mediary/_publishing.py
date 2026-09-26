@@ -1,8 +1,9 @@
 """Publish strategies: how the handlers of one notification are run."""
 
-import asyncio
 from collections.abc import Awaitable, Callable, Sequence
 from typing import Any, Protocol
+
+from ._concurrency import run_all
 
 NotificationHandler = Callable[[], Awaitable[Any]]
 """Runs one handler of the notification being published."""
@@ -29,25 +30,15 @@ class Sequential:
 
 
 class Concurrent:
-    """Run all handlers concurrently in an `asyncio.TaskGroup`.
+    """Run all handlers concurrently, in a task group.
 
     Every handler runs to completion even if others fail; failures are then raised together
-    as an `ExceptionGroup`, in handler order.
+    as an `ExceptionGroup`, in handler order. It runs on asyncio, or on trio and other event
+    loops through AnyIO (`mediary[anyio]`).
     """
 
     async def publish(self, handlers: Sequence[NotificationHandler], /) -> None:
         """Run the handlers as tasks and wait for all of them."""
-        errors: list[Exception | None] = [None] * len(handlers)
-
-        async def run(index: int) -> None:
-            try:
-                await handlers[index]()
-            except Exception as exc:
-                errors[index] = exc
-
-        async with asyncio.TaskGroup() as group:
-            for index in range(len(handlers)):
-                group.create_task(run(index))
-        failures = [error for error in errors if error is not None]
+        failures = [error for error in await run_all(handlers) if error is not None]
         if failures:
             raise ExceptionGroup(f"{len(failures)} notification handler(s) failed", failures)

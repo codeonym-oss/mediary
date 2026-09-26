@@ -9,14 +9,16 @@ authors = [{ name = "codeonym-oss" }]
 requires-python = ">=3.11"
 dependencies = []
 keywords = [
-    "mediator", "cqrs", "asyncio", "pipeline", "middleware", "command", "query", "notification",
-    "dependency-injection", "dishka", "fastapi",
+    "mediator", "cqrs", "pipeline", "middleware", "command", "query", "notification",
+    "dependency-injection", "asyncio", "anyio", "trio", "dishka", "fastapi",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
+    "Framework :: AnyIO",
     "Framework :: AsyncIO",
     "Framework :: FastAPI",
     "Framework :: Pytest",
+    "Framework :: Trio",
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
@@ -40,9 +42,10 @@ Changelog = "https://github.com/codeonym-oss/mediary/blob/main/CHANGELOG.md"
 mediary = "mediary.pytest_plugin"
 
 [project.optional-dependencies]
+anyio = ["anyio>=4"]
 dishka = ["dishka>=1.6"]
 fastapi = ["fastapi>=0.115"]
-full = ["mediary[dishka,fastapi]"]
+full = ["mediary[anyio,dishka,fastapi]"]
 
 [build-system]
 requires = ["uv_build>=0.8.22,<0.13"]
@@ -50,11 +53,13 @@ build-backend = "uv_build"
 
 [dependency-groups]
 # What the tests need; CI runs them with only it and one extra, to test each extra alone.
+# AnyIO's pytest plugin runs each async test under asyncio and trio (see tests/conftest.py).
 test = [
+    "anyio>=4",
     "httpx2",
     "pytest>=9",
-    "pytest-asyncio>=1.2",
     "pytest-cov>=7",
+    "trio>=0.27",
 ]
 dev = [
     {include-group = "test"},
@@ -112,9 +117,9 @@ addopts = [
     "-p", "no:mediary",
 ]
 testpaths = ["tests"]
-asyncio_mode = "auto"
-asyncio_default_fixture_loop_scope = "function"
 xfail_strict = true
+# AnyIO's plugin runs every async test once per installed backend: asyncio, and trio.
+anyio_mode = "auto"
 filterwarnings = ["error"]
 
 [tool.coverage.run]

@@ -55,6 +55,8 @@ def write_files(page: Path, root: Path) -> list[str]:
     return scripts
 
 
+# The examples are written for asyncio (`python -m asyncio`), and define global kinds once.
+@pytest.mark.parametrize("anyio_backend", ["asyncio"])
 @pytest.mark.parametrize("page", PAGES, ids=lambda page: str(page.relative_to(ROOT)))
 async def test_the_examples_run(
     page: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

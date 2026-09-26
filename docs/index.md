@@ -43,7 +43,7 @@ assert order_id == 42
 - **[CQRS](guide/cqrs.md).** `@command`, `@query`, `@event`, and senders that can only send one kind.
 - **Pluggable [dependency injection](guide/dependency-injection.md)**, with ready-made [dishka](integrations/dishka.md) and [FastAPI](integrations/fastapi.md) integrations.
 - **[Testing](guide/testing.md)** helpers and a pytest fixture.
-- **Zero dependencies**, asyncio only, Python 3.11+.
+- **Zero dependencies**, Python 3.11+. Runs on asyncio, or on [trio](integrations/anyio.md) through AnyIO.
 
 ## Install
 
@@ -54,6 +54,7 @@ pip install mediary[full]  # with every integration
 
 | Extra | Adds |
 |---|---|
+| `mediary[anyio]` | running on [trio](integrations/anyio.md), through AnyIO |
 | `mediary[dishka]` | [dishka](integrations/dishka.md) container integration |
 | `mediary[fastapi]` | [FastAPI](integrations/fastapi.md) integration, without a container |
 | `mediary[full]` | all of the above |

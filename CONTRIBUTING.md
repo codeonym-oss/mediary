@@ -20,7 +20,8 @@ The hooks run the same checks as CI:
 | `commit-msg` | the message is a [Conventional Commit](#commits)         |
 | `pre-push`   | the branch name follows [`<type>/<issue>-<slug>`](#branches) |
 
-Run the full suite with `uv run pytest` (a coverage below 95% fails). To test another Python
+Run the full suite with `uv run pytest` (a coverage below 95% fails). Every async test runs
+twice, under asyncio and under trio, through AnyIO's pytest plugin. To test another Python
 version: `uv run --isolated --python 3.14 pytest`.
 
 ## Workflow

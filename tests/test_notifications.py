@@ -1,8 +1,8 @@
-import asyncio
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from typing import Any
 
+import anyio
 import pytest
 from conftest import MakePackage
 
@@ -101,16 +101,21 @@ async def test_concurrent_runs_every_handler_and_groups_failures() -> None:
 
 
 async def test_concurrent_handlers_overlap() -> None:
-    ready = asyncio.Event()
+    # Each handler waits for the other to start: run one after the other, in either order,
+    # they would never finish.
+    first, second = anyio.Event(), anyio.Event()
 
-    async def waits(event: UserRegistered) -> None:
-        await ready.wait()
+    async def waits_for_second(event: UserRegistered) -> None:
+        first.set()
+        await second.wait()
 
-    async def signals(event: UserRegistered) -> None:
-        ready.set()
+    async def waits_for_first(event: UserRegistered) -> None:
+        second.set()
+        await first.wait()
 
-    m = subscribed(waits, signals, publish_strategy=Concurrent())
-    await asyncio.wait_for(m.publish(UserRegistered(1)), timeout=1)
+    m = subscribed(waits_for_second, waits_for_first, publish_strategy=Concurrent())
+    with anyio.fail_after(1):
+        await m.publish(UserRegistered(1))
 
 
 async def test_the_strategy_is_set_per_mediator_and_per_publish() -> None:
