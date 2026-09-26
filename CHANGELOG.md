@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/codeonym-oss/mediary/compare/v0.2.0...v0.2.1) (2026-09-26)
+
+
+### Documentation
+
+* move the docs site to Sphinx + Shibuya on Read the Docs ([#38](https://github.com/codeonym-oss/mediary/issues/38)) ([3082302](https://github.com/codeonym-oss/mediary/commit/3082302c8774a30cda9eb0a5e2a0818527240c16))
+
 ## [0.2.0](https://github.com/codeonym-oss/mediary/compare/v0.1.0...v0.2.0) (2026-09-26)
 
 
