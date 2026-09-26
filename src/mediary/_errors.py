@@ -73,6 +73,15 @@ class InvalidBehaviorSignature(MediaryError, TypeError):
         super().__init__(f"Invalid behavior {_name(behavior)}: {reason}")
 
 
+class RuleViolation(MediaryError, TypeError):
+    """A handler breaks a rule of its message's kind, such as a query handler returning None."""
+
+    def __init__(self, handler: object, kind: str, reason: str) -> None:
+        self.handler = handler
+        self.kind = kind
+        super().__init__(f"Handler {_name(handler)} breaks a rule of @{kind}: {reason}")
+
+
 class HandlerTimeout(MediaryError, TimeoutError):
     """A `TimeoutBehavior` gave up waiting for the rest of the pipeline."""
 

@@ -88,11 +88,15 @@ Invoke = Callable[[Any, Resolver], Awaitable[Any]]
 
 @dataclass(frozen=True, slots=True)
 class Binding:
-    """A handler bound to its request type, with how to call it for a request."""
+    """A handler bound to its request type, with how to call it for a request.
+
+    `returns` is the handler's resolved return hint, or `inspect.Signature.empty`.
+    """
 
     request_type: type
     source: Any
     invoke: Invoke
+    returns: Any = inspect.Signature.empty
 
 
 def bind(source: Any, request_type: type | None = None) -> Binding:
@@ -135,7 +139,9 @@ def bind(source: Any, request_type: type | None = None) -> Binding:
         invoke = _function_invoker(function, params)
     if request_type is None:
         request_type = _request_hint(source, params)
-    return Binding(request_type, source, invoke)
+    return Binding(
+        request_type, source, invoke, params.hints.get("return", inspect.Signature.empty)
+    )
 
 
 def _request_hint(source: Any, params: Shape) -> type:
