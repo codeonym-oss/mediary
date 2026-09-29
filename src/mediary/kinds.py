@@ -2,7 +2,9 @@
 
 A kind is a class decorator, like ``@request``, plus how its messages are dispatched and the
 rules their handlers must follow. Handlers, behaviors, ``scan`` and ``LoggingBehavior`` work with
-every kind, and behaviors can target one with ``kinds={"<name>"}``.
+every kind, and behaviors can target one with ``kinds={"<name>"}``. ``handler_for`` and
+``behavior_for`` make a kind's own ``@handler`` and ``@behavior``, which only work with its
+messages.
 
 Example:
     .. code-block:: python
@@ -18,6 +20,19 @@ Example:
 
 """
 
+from ._behaviors import BehaviorDecorator, behavior_for
+from ._handlers import HandlerDecorator, handler_for
 from ._markers import Dispatch, HandlerInfo, HandlerRule, Kind, define_kind, kind_of
 
-__all__ = ["Dispatch", "HandlerInfo", "HandlerRule", "Kind", "define_kind", "kind_of"]
+__all__ = [
+    "BehaviorDecorator",
+    "Dispatch",
+    "HandlerDecorator",
+    "HandlerInfo",
+    "HandlerRule",
+    "Kind",
+    "behavior_for",
+    "define_kind",
+    "handler_for",
+    "kind_of",
+]

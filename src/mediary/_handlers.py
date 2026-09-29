@@ -8,7 +8,7 @@ from typing import Any, Protocol, TypeVar, get_args, overload
 
 from ._concurrency import run_sync
 from ._errors import InvalidHandlerSignature
-from ._markers import Lifetime, Marker, mark, marker_of
+from ._markers import Kind, Lifetime, Marker, mark, marker_of
 from ._resolving import Resolver, Shape, resolve, shape
 
 _Req_contra = TypeVar("_Req_contra", contravariant=True)
@@ -135,13 +135,54 @@ def handler(target: Any = None, /, *, lifetime: Lifetime = "transient") -> Any:
         ValueError: ``lifetime`` is not "transient" or "singleton".
 
     """
+    return _mark_handler(target, lifetime, None)
+
+
+def _mark_handler(target: Any, lifetime: Lifetime, handles: str | None) -> Any:
     if lifetime not in _LIFETIMES:
         raise ValueError(f"lifetime must be one of {_LIFETIMES}, not {lifetime!r}")
     if inspect.isfunction(target) or hasattr(target, "handle"):
-        return mark(target, Marker(kind="handler", lifetime=lifetime))
+        return mark(target, Marker(kind="handler", lifetime=lifetime, handles=handles))
 
     def decorate(obj: _Any) -> _Any:
-        return mark(obj, Marker(kind="handler", target=target, lifetime=lifetime))
+        return mark(obj, Marker(kind="handler", target=target, lifetime=lifetime, handles=handles))
+
+    return decorate
+
+
+class HandlerDecorator(Protocol):
+    """The type of ``@handler``, and of the decorators ``handler_for`` makes."""
+
+    @overload
+    def __call__(self, target: type[_Handles], /) -> type[_Handles]: ...  # pyright: ignore[reportOverlappingOverload]
+    @overload
+    def __call__(
+        self, request_type: type[object] | None = None, /, *, lifetime: Lifetime = "transient"
+    ) -> Callable[[_Any], _Any]: ...
+    @overload
+    def __call__(self, target: _Fn, /) -> _Fn: ...
+
+
+def handler_for(kind: Kind) -> HandlerDecorator:
+    """Return a decorator like ``@handler`` for handlers of ``kind``'s messages only.
+
+    It takes the same arguments as ``@handler``. A handler it marks is rejected when it is
+    registered or scanned for a message of another kind, with a ``RuleViolation`` that names
+    both, so a mismatch is found at startup rather than at dispatch.
+
+    Example:
+        .. code-block:: python
+
+            report = define_kind("report", dispatch="send")
+            report_handler = handler_for(report)
+
+            @report_handler
+            async def monthly_sales(request: MonthlySales) -> Report: ...
+
+    """
+
+    def decorate(target: Any = None, /, *, lifetime: Lifetime = "transient") -> Any:
+        return _mark_handler(target, lifetime, kind.name)
 
     return decorate
 

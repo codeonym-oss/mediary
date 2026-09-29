@@ -5,7 +5,7 @@ Type-level tests: pyright (strict) checks this file in CI.
 `pyright: ignore[...]` asserts an error IS reported (unused ignores are errors).
 """
 
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any, TypeVar, assert_type
 
@@ -24,7 +24,24 @@ from mediary import (
     retryable,
     stream_request,
 )
-from mediary.cqrs import Command, CommandSender, Query, QuerySender, command, query
+from mediary.cqrs import (
+    Command,
+    CommandHandler,
+    CommandSender,
+    EventHandler,
+    Query,
+    QueryHandler,
+    QuerySender,
+    command,
+    command_behavior,
+    command_handler,
+    event,
+    event_behavior,
+    event_handler,
+    query,
+    query_behavior,
+    query_handler,
+)
 from mediary.testing import RecordingMediator
 
 T = TypeVar("T")
@@ -166,6 +183,65 @@ async def test_a_mediator_is_both_senders_and_each_sends_only_its_kind() -> None
     m.register(CountUsers, count_users)
     await use_senders(m, m)
     assert_type(command(Rename), type[Rename])
+
+
+@event
+@dataclass
+class Renamed:
+    name: str
+
+
+class RenameHandler(CommandHandler[Rename, None]):
+    async def handle(self, request: Rename) -> None:
+        pass
+
+
+class CountUsersHandler(QueryHandler[CountUsers, int]):
+    async def handle(self, request: CountUsers) -> int:
+        return 1
+
+
+class RenamedHandler(EventHandler[Renamed]):
+    async def handle(self, request: Renamed) -> None:
+        pass
+
+
+# A query is not a command, nor a command a query.
+class QueryAsCommand(CommandHandler[CountUsers, int]):  # pyright: ignore[reportInvalidTypeForm]
+    async def handle(self, request: CountUsers) -> int:
+        return 1
+
+
+class CommandAsQuery(QueryHandler[Rename, None]):  # pyright: ignore[reportInvalidTypeForm]
+    async def handle(self, request: Rename) -> None:
+        pass
+
+
+class WrongResult(QueryHandler[CountUsers, int]):
+    async def handle(self, request: CountUsers) -> str:  # pyright: ignore[reportIncompatibleMethodOverride]
+        return "one"
+
+
+def test_kind_handler_protocols_type_check_the_handler() -> None:
+    m = Mediator()
+    m.register(Rename, RenameHandler)
+    m.register(CountUsers, CountUsersHandler)
+    m.register(Renamed, RenamedHandler)
+    handler_: CommandHandler[Rename, None] = RenameHandler()
+    assert handler_ is not None
+
+
+def test_kind_decorators_keep_the_decorated_types() -> None:
+    assert_type(command_handler(RenameHandler), type[RenameHandler])
+    assert_type(query_handler(CountUsers)(CountUsersHandler), type[CountUsersHandler])
+    assert_type(event_handler(lifetime="singleton")(RenamedHandler), type[RenamedHandler])
+    decorated: Callable[[CountUsers], Awaitable[int]] = query_handler(count_users)
+    assert decorated is count_users
+    assert_type(command_behavior(Passthrough), type[Passthrough])
+    assert_type(query_behavior(order=1)(Passthrough), type[Passthrough])
+    assert event_behavior(passthrough) is passthrough
+    with pytest.raises(TypeError):  # the kind is fixed: no kinds= to override it
+        query_behavior(kinds={"command"})  # pyright: ignore[reportCallIssue]
 
 
 class Flaky(Exception):
