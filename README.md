@@ -424,6 +424,10 @@ Most mediator libraries have you register each request with its handler, and eac
 
 `register` and `use` are still there when you want explicit wiring, as in libraries and tests.
 
+## Stability
+
+mediary is in Beta. The public API is what the [API reference](https://docs.codeonym.work/projects/mediary/reference/mediary/) documents. Before 1.0, a minor release changes it only after a deprecation, and deprecated names keep working, with a warning, until 1.0. See the [stability policy](https://docs.codeonym.work/projects/mediary/stability/) for the details and for Python support.
+
 ## Development
 
 Requires [uv](https://docs.astral.sh/uv/). See [CONTRIBUTING.md](https://github.com/codeonym-oss/mediary/blob/main/CONTRIBUTING.md) for the conventions.

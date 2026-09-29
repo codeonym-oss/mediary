@@ -130,6 +130,13 @@ Mark errors as transient, for `RetryBehavior`.
 .. autoexception:: mediary.TransientError
 ```
 
+## Version
+
+```{py:data} mediary.__version__
+
+The installed version of mediary, such as `"0.3.0"`.
+```
+
 ## Errors
 
 Every error mediary raises about messages, handlers and behaviors is a `MediaryError`, and also the closest built-in exception, such as `LookupError` or `TypeError`. An invalid argument raises a plain `ValueError` or `TypeError`.
