@@ -5,7 +5,18 @@ import pytest
 from conftest import MakePackage
 
 from mediary import DuplicateHandler, Mediator, Next, RuleViolation, ScanError, handler
-from mediary.cqrs import Command, Query, command, event, query
+from mediary.cqrs import (
+    Command,
+    Query,
+    command,
+    command_behavior,
+    command_handler,
+    event,
+    event_behavior,
+    event_handler,
+    query,
+    query_handler,
+)
 
 
 @command
@@ -160,3 +171,170 @@ def test_scan_reports_every_rule_violation(make_package: MakePackage) -> None:
     with pytest.raises(ScanError) as exc:
         Mediator().scan(pkg)
     assert [type(e) for e in exc.value.errors] == [RuleViolation, RuleViolation, DuplicateHandler]
+
+
+# Handler and behavior decorators of each kind
+
+
+async def test_kind_handlers_register_and_scan_like_handler(make_package: MakePackage) -> None:
+    pkg = make_package(
+        {
+            "app.py": """
+                from mediary.cqrs import (
+                    Command, Query, command, command_handler, event, event_handler, query,
+                    query_handler,
+                )
+
+                seen = []
+
+                @command
+                class Save(Command[int]):
+                    pass
+
+                @query
+                class Load(Query[str]):
+                    pass
+
+                @event
+                class Saved:
+                    pass
+
+                @command_handler
+                async def save(command: Save) -> int:
+                    return 1
+
+                @query_handler(lifetime="singleton")
+                class LoadHandler:
+                    async def handle(self, query: Load) -> str:
+                        return "loaded"
+
+                @event_handler
+                def saved(event: Saved) -> None:  # sync, as @handler allows
+                    seen.append("saved")
+            """
+        }
+    )
+    m = Mediator()
+    m.scan(pkg)
+    app = __import__(f"{pkg}.app", fromlist=["app"])
+    assert await m.send(app.Save()) == 1
+    assert await m.send(app.Load()) == "loaded"
+    await m.publish(app.Saved())
+    assert app.seen == ["saved"]
+
+
+async def test_a_kind_handler_can_name_its_message() -> None:
+    @command_handler(Rename)
+    async def rename(command: object) -> None:
+        pass
+
+    m = Mediator()
+    m.register(Rename, rename)
+    assert await m.send(Rename(1, "ada")) is None
+
+
+@pytest.mark.parametrize(
+    ("decorate", "message", "wrong"),
+    [
+        (command_handler, GetName, "@query"),
+        (query_handler, Rename, "@command"),
+        (event_handler, Rename, "@command"),
+        (command_handler, Renamed, "@event"),
+    ],
+)
+def test_a_kind_handler_rejects_messages_of_other_kinds(
+    decorate: Any, message: type, wrong: str
+) -> None:
+    async def handle(message: Any) -> str:
+        return ""
+
+    source = decorate(handle)
+    with pytest.raises(
+        RuleViolation, match=f"handles only @.* messages, but .*{message.__qualname__} is a {wrong}"
+    ) as exc:
+        Mediator().register(message, source)
+    assert exc.value.handler is source
+
+
+def test_scan_reports_kind_mismatches_with_the_other_problems(make_package: MakePackage) -> None:
+    pkg = make_package(
+        {
+            "app.py": """
+                from mediary.cqrs import Command, Query, command, command_handler, query
+
+                @query
+                class Load(Query[str]):
+                    pass
+
+                @command
+                class Save(Command[None]):
+                    pass
+
+                @command_handler
+                async def load(query: Load) -> str: ...
+
+                @command_handler
+                class SaveHandler:
+                    async def handle(self, command: Save) -> None: ...
+            """
+        }
+    )
+    m = Mediator()
+    with pytest.raises(ScanError) as exc:
+        m.scan(pkg)
+    (problem,) = exc.value.errors
+    assert isinstance(problem, RuleViolation)
+    assert "Load is a @query" in str(problem)
+
+
+def test_a_query_handler_still_must_return_something() -> None:
+    @query_handler
+    async def nothing(query: GetName) -> None:
+        pass
+
+    with pytest.raises(RuleViolation, match="a query handler must return what it read"):
+        Mediator().register(GetName, nothing)
+
+
+async def test_kind_behaviors_wrap_only_their_kind(make_package: MakePackage) -> None:
+    pkg = make_package(
+        {
+            "behaviors.py": """
+                from mediary.cqrs import command_behavior, event_behavior, query_behavior
+
+                log = []
+
+                @command_behavior
+                async def commands(message, next):
+                    log.append(f"command {type(message).__name__}")
+                    return await next()
+
+                @query_behavior(order=5)
+                class Queries:
+                    async def handle(self, message, next):
+                        log.append(f"query {type(message).__name__}")
+                        return await next()
+
+                @event_behavior
+                async def events(message, next):
+                    log.append(f"event {type(message).__name__}")
+                    return await next()
+            """
+        }
+    )
+    m = make_mediator()
+    m.scan(pkg)
+    await m.send(Rename(1, "ada"))
+    await m.send(GetName(1))
+    log = __import__(f"{pkg}.behaviors", fromlist=["log"]).log
+    assert log == ["command Rename", "event Renamed", "query GetName"]
+
+
+def test_kind_decorators_have_their_own_names_and_docs() -> None:
+    for decorate in (command_handler, query_handler, event_handler):
+        assert decorate.__module__ == "mediary.cqrs"
+        assert decorate.__doc__ is not None
+        assert "@handler" in decorate.__doc__
+    assert getattr(command_behavior, "__name__", None) == "command_behavior"
+    assert event_behavior.__doc__ is not None
+    assert 'kinds={"event"}' in event_behavior.__doc__

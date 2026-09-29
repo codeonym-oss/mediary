@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import Any, Protocol, TypeAlias, TypeVar, Union, overload
 
 from ._errors import InvalidBehaviorSignature
-from ._markers import Marker, kind_of, mark, marker_of
+from ._markers import Kind, Marker, kind_of, mark, marker_of
 from ._resolving import Resolver, Shape, require_async, resolve, shape
 
 _R = TypeVar("_R")
@@ -117,12 +117,48 @@ def behavior(target: Any = None, /, *, order: int = 0, kinds: Iterable[str] | No
         TypeError: ``kinds`` is a single string rather than a collection of them.
 
     """
-    marker = Marker(kind="behavior", order=order, kinds=_kinds(kinds))
+    return _mark_behavior(target, Marker(kind="behavior", order=order, kinds=_kinds(kinds)))
+
+
+def _mark_behavior(target: Any, marker: Marker) -> Any:
     if target is not None:
         return mark(target, marker)
 
     def decorate(obj: _Any) -> _Any:
         return mark(obj, marker)
+
+    return decorate
+
+
+class BehaviorDecorator(Protocol):
+    """The type of the decorators ``behavior_for`` makes: ``@behavior`` without ``kinds``."""
+
+    @overload
+    def __call__(self, target: type[_Behaves], /) -> type[_Behaves]: ...
+    @overload
+    def __call__(self, target: _Fn, /) -> _Fn: ...
+    @overload
+    def __call__(self, *, order: int = 0) -> Callable[[_Any], _Any]: ...
+
+
+def behavior_for(kind: Kind) -> BehaviorDecorator:
+    """Return a decorator like ``@behavior`` for behaviors that wrap only ``kind``'s messages.
+
+    ``@behavior_for(kind)`` is ``@behavior(kinds={kind.name})``, and takes the same ``order``.
+
+    Example:
+        .. code-block:: python
+
+            report_behavior = behavior_for(report)
+
+            @report_behavior(order=-10)
+            async def audit(request: object, next: Next[T]) -> T: ...
+
+    """
+
+    def decorate(target: Any = None, /, *, order: int = 0) -> Any:
+        marker = Marker(kind="behavior", order=order, kinds=frozenset({kind.name}))
+        return _mark_behavior(target, marker)
 
     return decorate
 

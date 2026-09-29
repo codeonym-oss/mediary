@@ -95,6 +95,56 @@ assert await mediator.send(Logins()) == ["ada", "grace"]
 
 A rule violation raises `RuleViolation` from `register`; `scan` collects them with every other problem into its `ScanError`, so broken handlers never reach production.
 
+## A kind's own handler and behavior decorators
+
+`handler_for(kind)` makes a `@handler` for the kind's messages only, and `behavior_for(kind)` a `@behavior` that wraps only them. They take the same arguments as `@handler` and `@behavior` (but no `kinds=`, which is fixed). A handler the first marks is rejected, with a `RuleViolation` naming the handler and the message, if it is registered or scanned for a message of another kind:
+
+```python
+from mediary import Next, request
+from mediary.kinds import behavior_for, handler_for
+
+job_handler = handler_for(job)
+job_behavior = behavior_for(job)
+started = []
+
+
+@job_handler
+async def compress_image(job: ResizeImage) -> str:
+    return f"{job.path} compressed"
+
+
+@job_behavior(order=-10)
+async def log_jobs(job: object, next: Next[str]) -> str:
+    started.append(type(job).__name__)
+    return await next()
+
+
+mediator = Mediator()
+mediator.register(ResizeImage, compress_image)
+mediator.use(log_jobs)
+assert await mediator.send(ResizeImage("cat.png")) == "cat.png compressed"
+assert started == ["ResizeImage"]
+
+
+@request
+class Ping(Returns[str]):
+    pass
+
+
+@job_handler
+async def ping(request: Ping) -> str:
+    return "pong"
+
+
+try:
+    mediator.register(Ping, ping)
+except RuleViolation as error:
+    reason = str(error)
+assert "handles only @job messages" in reason
+```
+
+The [CQRS](cqrs.md) pack's `@command_handler` and `@command_behavior`, and their counterparts, are made this way.
+
 ## Inspecting kinds
 
 `kind_of(cls)` returns the `Kind` a class is decorated as, or `None` if it isn't a message — useful in behaviors and tooling:

@@ -63,9 +63,10 @@ class Yields(Generic[_R_co]):
 class Marker:
     """What a decorator recorded about a class or function.
 
-    ``target`` is the request type an ``@handler(SomeRequest)`` names explicitly, and ``lifetime``
-    how long a class handler's instance lives. ``order`` and ``kinds`` are a behavior's place in
-    the pipeline and the request kinds it wraps (None for all).
+    ``target`` is the request type an ``@handler(SomeRequest)`` names explicitly, ``lifetime``
+    how long a class handler's instance lives, and ``handles`` the one kind of message a handler
+    made by ``handler_for`` may handle (None for any). ``order`` and ``kinds`` are a behavior's
+    place in the pipeline and the request kinds it wraps (None for all).
     """
 
     kind: str
@@ -73,6 +74,7 @@ class Marker:
     lifetime: Lifetime = "transient"
     order: int = 0
     kinds: frozenset[str] | None = None
+    handles: str | None = None
 
 
 def mark(obj: _T, marker: Marker) -> _T:

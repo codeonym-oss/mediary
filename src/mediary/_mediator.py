@@ -199,6 +199,14 @@ class Mediator:
                 else f"it is an async generator, but @{kind.name} handlers `return` a result; "
                 "only the handlers of stream requests `yield`",
             )
+        handles = marker.handles if (marker := marker_of(binding.source)) is not None else None
+        if handles is not None and handles != kind.name:
+            raise RuleViolation(
+                binding.source,
+                kind.name,
+                f"it handles only @{handles} messages, but {_qualified_name(target)} is a "
+                f"@{kind.name}",
+            )
         reason = kind.check(HandlerInfo(target, binding.source, binding.returns))
         if reason is not None:
             raise RuleViolation(binding.source, kind.name, reason)
