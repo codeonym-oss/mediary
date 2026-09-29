@@ -56,21 +56,22 @@ jobs:
 
   # The tests with no extra installed, then with each one alone: the tests of missing extras
   # skip, and the core must not need any of them. (AnyIO and trio are test tools, so every run
-  # has them: each async test runs under both asyncio and trio.)
+  # has them: each async test runs under both asyncio and trio.) The otel run adds the SDK, whose
+  # in-memory exporter its tests read spans from.
   extras:
     name: extras (${{ matrix.extra }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        extra: [none, dishka, fastapi]
+        extra: [none, dishka, fastapi, otel]
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           enable-cache: true
           python-version: "3.11"
-      - run: uv sync --frozen --no-default-groups --group test ${{ matrix.extra != 'none' && format('--extra {0}', matrix.extra) || '' }}
+      - run: uv sync --frozen --no-default-groups --group test ${{ matrix.extra != 'none' && format('--extra {0}', matrix.extra) || '' }} ${{ matrix.extra == 'otel' && '--group test-otel' || '' }}
       - run: uv run --frozen --no-sync pytest --no-cov
 
   build-check:

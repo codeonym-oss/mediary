@@ -35,6 +35,14 @@ def test_the_readme_and_the_docs_have_examples() -> None:
     assert len(PAGES) > 10
 
 
+def installed(module: str) -> bool:
+    """Whether ``module`` can be imported; for ``a.b``, finding it imports ``a``, which may fail."""
+    try:
+        return importlib.util.find_spec(module) is not None
+    except ModuleNotFoundError:
+        return False
+
+
 def write_files(page: Path, root: Path) -> list[str]:
     """Write the page's file blocks under `root`; return its other blocks, to run in order."""
     text = page.read_text()
@@ -43,7 +51,7 @@ def write_files(page: Path, root: Path) -> list[str]:
         # Pad with blank lines so tracebacks point at the page's line numbers.
         code = "\n" * text.count("\n", 0, match.start("code")) + match["code"]
         if match["directive"] == "requires" and not all(
-            importlib.util.find_spec(module) for module in match["arg"].split(",")
+            installed(module) for module in match["arg"].split(",")
         ):
             continue
         path = match["arg"] if match["directive"] == "file" else match["title"]

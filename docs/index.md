@@ -39,7 +39,7 @@ assert order_id == 42
 
 - **Decorate, don't register.** Mark requests with `@request` and handlers with `@handler`; one `mediator.scan("app")` wires the whole package, and reports every wiring mistake at startup.
 - **Typed end to end.** `await mediator.send(GetUser(1))` is typed as `User`. Handlers are plain classes or functions, matched structurally: nothing to inherit.
-- **Pipelines.** [Behaviors](guide/behaviors.md) wrap handlers like middleware, targeted by type, `Protocol` or kind, and ordered. Logging, retry and timeout ship ready-made.
+- **Pipelines.** [Behaviors](guide/behaviors.md) wrap handlers like middleware, targeted by type, `Protocol` or kind, and ordered. Logging, retry and timeout ship ready-made, and [OpenTelemetry](integrations/otel.md) tracing as an extra.
 - **[Notifications](guide/notifications.md)** to any number of handlers, sequentially or concurrently, and **[streams](guide/streams.md)** of items from async generators.
 - **[CQRS](guide/cqrs.md).** `@command`, `@query`, `@event`, and senders that can only send one kind.
 - **Pluggable [dependency injection](guide/dependency-injection.md)**, with ready-made [dishka](integrations/dishka.md) and [FastAPI](integrations/fastapi.md) integrations.
@@ -58,6 +58,7 @@ pip install mediary[full]  # with every integration
 | `mediary[anyio]` | running on [trio](integrations/anyio.md), through AnyIO |
 | `mediary[dishka]` | [dishka](integrations/dishka.md) container integration |
 | `mediary[fastapi]` | [FastAPI](integrations/fastapi.md) integration, without a container |
+| `mediary[otel]` | [OpenTelemetry](integrations/otel.md) tracing of every message |
 | `mediary[full]` | all of the above |
 
 ## Next steps
@@ -84,6 +85,7 @@ guide/testing
 
 dishka <integrations/dishka>
 FastAPI <integrations/fastapi>
+OpenTelemetry <integrations/otel>
 AnyIO and trio <integrations/anyio>
 ```
 
@@ -108,6 +110,7 @@ reference/behaviors
 reference/testing
 reference/ext-dishka
 reference/ext-fastapi
+reference/ext-otel
 ```
 
 ```{toctree}

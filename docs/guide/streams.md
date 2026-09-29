@@ -86,6 +86,36 @@ async with mediator.stream(ExportOrders(6)) as orders:
 
 Stream behaviors wrap only stream requests, and other behaviors never do, so a logging behavior written for `send` doesn't see streams by accident. Hints, `kinds=` and `order` work as for [other behaviors](behaviors.md); the kind of a stream request is `"stream_request"`.
 
+To wrap both, a behavior class adds an async generator `handle_stream` beside its `handle`. One `use` then adds it for sends and publishes (through `handle`) and for streams (through `handle_stream`), with the same `order` and `kinds`:
+
+```python
+from mediary import Next
+
+audit = []
+
+
+class Audit:
+    async def handle(self, request: object, next: Next[object]) -> object:
+        audit.append(f"sent {type(request).__name__}")
+        return await next()
+
+    async def handle_stream(
+        self, request: object, next: NextStream[object]
+    ) -> AsyncIterator[object]:
+        async for item in next():
+            yield item
+        audit.append(f"streamed {type(request).__name__}")
+
+
+mediator = Mediator()
+mediator.scan("shop")
+mediator.use(Audit())
+
+async with mediator.stream(ExportOrders(2)) as orders:
+    assert [order_id async for order_id in orders] == [1, 2]
+assert audit == ["streamed ExportOrders"]
+```
+
 ## Errors
 
 An error raised by the handler reaches the consumer at the item where it happened, through every behavior on the way, so a stream behavior can catch it:

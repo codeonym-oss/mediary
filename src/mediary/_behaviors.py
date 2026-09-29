@@ -95,7 +95,9 @@ def behavior(target: Any = None, /, *, order: int = 0, kinds: Iterable[str] | No
 
     A behavior whose ``handle`` (or the function itself) is an async generator is a stream
     behavior: it wraps only stream requests, and gets ``next`` as a ``NextStream``. Every other
-    behavior wraps only the requests and notifications that are sent or published.
+    behavior wraps only the requests and notifications that are sent or published. A class
+    whose async ``handle`` wraps those can wrap streams too, with an async generator
+    ``handle_stream(self, request, next)``; the two share the class's ``order`` and ``kinds``.
 
     Behaviors with a lower ``order`` run outside those with a higher one; ties are ordered by
     fully qualified name. A class behavior is resolved through the ``Resolver`` for every send.
@@ -162,50 +164,85 @@ class BehaviorBinding:
         return self.targets is None or any(_matches(request_type, t) for t in self.targets)
 
 
+_LEADING = ("request", "next")
+
+
 def bind_behavior(
     source: Any, *, order: int | None = None, kinds: Iterable[str] | None = None
-) -> BehaviorBinding:
+) -> list[BehaviorBinding]:
     """Bind a behavior class, function or instance; ``order`` and ``kinds`` override the decorator.
 
     A class is resolved through the ``Resolver`` on every call; an instance is used as it is.
+    There is one binding, or two for a class with both ``handle`` and ``handle_stream``.
 
     Raises:
         InvalidBehaviorSignature: it isn't an async function, or a class or instance with an
-            async ``handle`` taking ``(request, next)``, or its hints are unresolvable or target no
-            class.
+            async ``handle`` taking ``(request, next)``, or its ``handle_stream`` isn't an async
+            generator beside a ``handle`` that isn't one, or its hints are unresolvable or
+            target no class.
 
     """
     marker = marker_of(source)
-    leading = ("request", "next")
-    if isinstance(source, type) or (hasattr(source, "handle") and not inspect.isfunction(source)):
-        cls = source if isinstance(source, type) else type(source)
-        handle = require_async(
-            source,
-            getattr(cls, "handle", None),
-            "an `async def handle(self, request, next)`",
-            InvalidBehaviorSignature,
-        )
-        params = shape(source, handle, leading=leading, method=True, error=InvalidBehaviorSignature)
-        streams = inspect.isasyncgenfunction(handle)
-        invoke = (
-            _class_invoker(source, streams) if source is cls else _instance_invoker(source, streams)
-        )
-    else:
-        cls = source
+    order = order if order is not None else marker.order if marker is not None else 0
+    kinds = _kinds(kinds) if kinds is not None else marker.kinds if marker else None
+    if not isinstance(source, type) and (
+        inspect.isfunction(source) or not hasattr(source, "handle")
+    ):
         function = require_async(
             source, source, "to be an `async def` function or a class", InvalidBehaviorSignature
         )
         params = shape(
-            source, function, leading=leading, method=False, error=InvalidBehaviorSignature
+            source, function, leading=_LEADING, method=False, error=InvalidBehaviorSignature
         )
         streams = inspect.isasyncgenfunction(function)
         invoke = _function_invoker(function, params, streams)
+        return [_binding(source, source, order, kinds, params, invoke, streams)]
+    cls = source if isinstance(source, type) else type(source)
+    handle = require_async(
+        source,
+        getattr(cls, "handle", None),
+        "an `async def handle(self, request, next)`",
+        InvalidBehaviorSignature,
+    )
+    methods = [("handle", handle)]
+    handle_stream = getattr(cls, "handle_stream", None)
+    if handle_stream is not None:
+        if inspect.isasyncgenfunction(handle) or not inspect.isasyncgenfunction(handle_stream):
+            raise InvalidBehaviorSignature(
+                source,
+                "`handle_stream` must be an async generator, beside a `handle` that isn't one",
+            )
+        methods.append(("handle_stream", handle_stream))
+    bindings: list[BehaviorBinding] = []
+    for name, method in methods:
+        params = shape(
+            source, method, leading=_LEADING, method=True, error=InvalidBehaviorSignature
+        )
+        streams = inspect.isasyncgenfunction(method)
+        invoke = (
+            _class_invoker(source, name, streams)
+            if source is cls
+            else _instance_invoker(source, name, streams)
+        )
+        bindings.append(_binding(source, cls, order, kinds, params, invoke, streams))
+    return bindings
+
+
+def _binding(
+    source: Any,
+    cls: Any,
+    order: int,
+    kinds: frozenset[str] | None,
+    params: Shape,
+    invoke: InvokeBehavior,
+    streams: bool,
+) -> BehaviorBinding:
     return BehaviorBinding(
         source=source,
-        order=order if order is not None else marker.order if marker is not None else 0,
+        order=order,
         name=f"{cls.__module__}.{cls.__qualname__}",
         targets=_targets(source, params),
-        kinds=_kinds(kinds) if kinds is not None else marker.kinds if marker else None,
+        kinds=kinds,
         invoke=invoke,
         streams=streams,
     )
@@ -263,17 +300,19 @@ def _annotation_names(cls: type) -> Iterable[str]:
     return inspect.get_annotations(cls)
 
 
-def _class_invoker(cls: type, streams: bool) -> InvokeBehavior:
+def _class_invoker(cls: type, method: str, streams: bool) -> InvokeBehavior:
     async def invoke(request: Any, next: Any, resolver: Resolver) -> Any:
-        result = (await resolve(resolver, cls)).handle(request, next)
+        result = getattr(await resolve(resolver, cls), method)(request, next)
         return result if streams else await result
 
     return invoke
 
 
-def _instance_invoker(instance: Any, streams: bool) -> InvokeBehavior:
+def _instance_invoker(instance: Any, method: str, streams: bool) -> InvokeBehavior:
+    handle = getattr(instance, method)
+
     async def invoke(request: Any, next: Any, resolver: Resolver) -> Any:
-        result = instance.handle(request, next)
+        result = handle(request, next)
         return result if streams else await result
 
     return invoke
