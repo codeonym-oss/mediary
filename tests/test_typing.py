@@ -92,6 +92,31 @@ def test_register_accepts_matching_function_handlers() -> None:
     Mediator().register(Delete, get_name)  # pyright: ignore[reportArgumentType]
 
 
+class SyncGetNameHandler:
+    def handle(self, request: GetName) -> str:
+        return "ada"
+
+
+def sync_get_name(request: GetName, other: Untyped) -> str:
+    return "ada"
+
+
+async def test_sync_handlers_are_registered_and_typed_like_async_ones() -> None:
+    Mediator().register(Delete, SyncGetNameHandler)  # pyright: ignore[reportArgumentType]
+    Mediator().register(Delete, sync_get_name)  # pyright: ignore[reportArgumentType]
+    Mediator().register(GetName, sync_get_name)
+    m = Mediator()
+    m.register(GetName, SyncGetNameHandler)
+    assert_type(await m.send(GetName(1)), str)
+
+
+def test_handler_keeps_the_decorated_sync_types() -> None:
+    assert_type(handler(SyncGetNameHandler), type[SyncGetNameHandler])
+    assert_type(handler(GetName)(SyncGetNameHandler), type[SyncGetNameHandler])
+    decorated: Callable[[GetName, Untyped], str] = handler(sync_get_name)
+    assert decorated is sync_get_name
+
+
 class Passthrough:
     async def handle(self, request: object, next: Next[T]) -> T:
         return await next()

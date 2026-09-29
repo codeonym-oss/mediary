@@ -767,7 +767,7 @@ test = [
 
 [package.metadata]
 requires-dist = [
-    { name = "anyio", marker = "extra == 'anyio'", specifier = ">=4" },
+    { name = "anyio", marker = "extra == 'anyio'", specifier = ">=4.1" },
     { name = "dishka", marker = "extra == 'dishka'", specifier = ">=1.6" },
     { name = "fastapi", marker = "extra == 'fastapi'", specifier = ">=0.115" },
     { name = "mediary", extras = ["anyio", "dishka", "fastapi"], marker = "extra == 'full'" },
@@ -776,7 +776,7 @@ provides-extras = ["anyio", "dishka", "fastapi", "full"]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "anyio", specifier = ">=4" },
+    { name = "anyio", specifier = ">=4.1" },
     { name = "commitizen", specifier = ">=4.8" },
     { name = "httpx2" },
     { name = "mediary", extras = ["full"] },
@@ -798,7 +798,7 @@ docs = [
     { name = "sphinx-autobuild", marker = "python_full_version >= '3.12'", specifier = ">=2025.8" },
 ]
 test = [
-    { name = "anyio", specifier = ">=4" },
+    { name = "anyio", specifier = ">=4.1" },
     { name = "httpx2" },
     { name = "pytest", specifier = ">=9" },
     { name = "pytest-cov", specifier = ">=7" },

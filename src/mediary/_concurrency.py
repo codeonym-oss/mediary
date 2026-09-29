@@ -1,4 +1,4 @@
-"""Sleeping, timeouts and task groups on the running event loop: asyncio, or AnyIO's backends.
+"""Sleeping, timeouts, task groups and worker threads on the running event loop.
 
 Under asyncio these use the standard library alone. Under any other event loop, such as trio,
 they use AnyIO, which the ``mediary[anyio]`` extra installs.
@@ -7,6 +7,7 @@ they use AnyIO, which the ``mediary[anyio]`` extra installs.
 import asyncio
 import sys
 from collections.abc import Awaitable, Callable, Sequence
+from functools import partial
 from typing import Any, TypeVar
 
 _T = TypeVar("_T")
@@ -46,6 +47,17 @@ async def sleep(seconds: float) -> None:
         await asyncio.sleep(seconds)
     else:
         await _anyio().sleep(seconds)
+
+
+async def run_sync(fn: Callable[..., _T], *args: Any) -> _T:
+    """Return ``fn(*args)``, called on a worker thread so it never blocks the event loop.
+
+    Cancelling the caller doesn't stop the thread: it is abandoned and runs to completion in the
+    background, and its result is dropped.
+    """
+    if _on_asyncio():
+        return await asyncio.to_thread(fn, *args)
+    return await _anyio().to_thread.run_sync(partial(fn, *args), abandon_on_cancel=True)
 
 
 class Expired(Exception):

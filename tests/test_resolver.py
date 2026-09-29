@@ -1,4 +1,5 @@
-from collections.abc import Awaitable, Callable
+import functools
+from collections.abc import Awaitable, Callable, Iterator
 from dataclasses import dataclass, field
 from typing import Any, TypeVar
 
@@ -191,8 +192,8 @@ def test_a_function_and_a_class_cannot_both_handle_a_request() -> None:
         m.register(Greet, GreetHandler)
 
 
-def _sync(request: Greet) -> str:
-    return "sync"
+def _sync_generator(request: Greet) -> Iterator[str]:
+    yield "sync"
 
 
 async def _no_params() -> str:
@@ -217,7 +218,8 @@ async def _singleton_function(request: Greet) -> str:
 
 
 INVALID_FUNCTIONS: list[tuple[Callable[..., Any], str]] = [
-    (_sync, "`async def` function"),
+    (_sync_generator, "sync generator"),
+    (functools.partial(_no_params), "to be a function or a class"),
     (_no_params, "must take positional parameters \\(request\\)"),
     (_keyword_request, "must take positional parameters \\(request\\)"),
     (_var_args, "resolved one by one"),

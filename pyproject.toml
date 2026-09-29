@@ -42,7 +42,7 @@ Changelog = "https://github.com/codeonym-oss/mediary/blob/main/CHANGELOG.md"
 mediary = "mediary.pytest_plugin"
 
 [project.optional-dependencies]
-anyio = ["anyio>=4"]
+anyio = ["anyio>=4.1"]
 dishka = ["dishka>=1.6"]
 fastapi = ["fastapi>=0.115"]
 full = ["mediary[anyio,dishka,fastapi]"]
@@ -55,7 +55,7 @@ build-backend = "uv_build"
 # What the tests need; CI runs them with only it and one extra, to test each extra alone.
 # AnyIO's pytest plugin runs each async test under asyncio and trio (see tests/conftest.py).
 test = [
-    "anyio>=4",
+    "anyio>=4.1",
     "httpx2",
     "pytest>=9",
     "pytest-cov>=7",

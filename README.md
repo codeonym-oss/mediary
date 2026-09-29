@@ -71,7 +71,7 @@ Prefer explicit wiring? `mediator.register(PlaceOrder, PlaceOrderHandler)` does 
 
 ## Function handlers and dependency injection
 
-A handler can be an async function. Its parameters after the request are dependencies, resolved by type hint on every call:
+A handler can be an async function (or a plain `def`, run on a worker thread). Its parameters after the request are dependencies, resolved by type hint on every call:
 
 <!-- file: shop/stock.py -->
 ```python

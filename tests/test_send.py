@@ -150,11 +150,8 @@ def test_subclasses_of_a_request_are_not_requests_unless_decorated() -> None:
 
 @pytest.mark.parametrize(
     "handler",
-    [
-        type("NoHandle", (), {}),
-        type("SyncHandle", (), {"handle": lambda self, request: None}),  # pyright: ignore[reportUnknownLambdaType]
-    ],
+    [type("NoHandle", (), {}), type("NotAMethod", (), {"handle": "pong"})],
 )
-def test_handlers_need_an_async_handle(handler: type) -> None:
-    with pytest.raises(InvalidHandlerSignature, match="async def handle"):
+def test_handlers_need_a_handle_method(handler: type) -> None:
+    with pytest.raises(InvalidHandlerSignature, match=r"a `handle\(self, request\)` method"):
         Mediator().register(Ping, handler)
