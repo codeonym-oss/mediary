@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.3.0](https://github.com/codeonym-oss/mediary/compare/v0.2.1...v0.3.0) (2026-09-29)
+
+
+### Features
+
+* add CQRS handler and behavior decorators ([#51](https://github.com/codeonym-oss/mediary/issues/51)) ([eab4768](https://github.com/codeonym-oss/mediary/commit/eab4768839181d89da2caafd7a25290393480c39))
+* deprecate NotARequest, InvalidHandlerSignature and InvalidBehaviorSignature; use NotAMessage, InvalidHandler and InvalidBehavior ([#52](https://github.com/codeonym-oss/mediary/issues/52)) ([1dc3039](https://github.com/codeonym-oss/mediary/commit/1dc30390e6779d7c5aa0b37a731d95282b2fd7dc))
+* deprecate passing Mediator.register's and RecordingMediator.sent_of/published_of/streamed_of's parameters by keyword; pass them positionally ([#52](https://github.com/codeonym-oss/mediary/issues/52)) ([1dc3039](https://github.com/codeonym-oss/mediary/commit/1dc30390e6779d7c5aa0b37a731d95282b2fd7dc))
+* deprecate the .cls and .request_type attributes of errors; use .message_type ([#52](https://github.com/codeonym-oss/mediary/issues/52)) ([1dc3039](https://github.com/codeonym-oss/mediary/commit/1dc30390e6779d7c5aa0b37a731d95282b2fd7dc))
+* run sync handlers on a worker thread ([#48](https://github.com/codeonym-oss/mediary/issues/48)) ([8d754b7](https://github.com/codeonym-oss/mediary/commit/8d754b7cfdca20ce2997d5057353ffc9a9a3ba6b))
+* settle the public API before 1.0: Sender and Publisher protocols, NotificationCall for publish strategies, kinds= names checked, LoggingBehavior logs streams ([#52](https://github.com/codeonym-oss/mediary/issues/52)) ([1dc3039](https://github.com/codeonym-oss/mediary/commit/1dc30390e6779d7c5aa0b37a731d95282b2fd7dc))
+* trace messages with OpenTelemetry, mediary[otel] ([#50](https://github.com/codeonym-oss/mediary/issues/50)) ([8df89b4](https://github.com/codeonym-oss/mediary/commit/8df89b4729de478c7e657dc3d1aad9f1939b77d7))
+
+
+### Documentation
+
+* move to Beta, with a stability policy ([#53](https://github.com/codeonym-oss/mediary/issues/53)) ([d592015](https://github.com/codeonym-oss/mediary/commit/d592015409dba33b663a60e4428ae7279b410c1d))
+
 ## [0.2.1](https://github.com/codeonym-oss/mediary/compare/v0.2.0...v0.2.1) (2026-09-26)
 
 
