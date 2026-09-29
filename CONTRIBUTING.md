@@ -22,7 +22,7 @@ The hooks run the same checks as CI:
 
 Run the full suite with `uv run pytest` (a coverage below 95% fails). For a change that could
 affect performance, compare `uv run python benchmarks/bench.py` before and after it, on the same
-machine (see the [benchmarks page](https://docs.codeonym.work/projects/mediary/benchmarks/)). Every async test runs
+machine (see the [benchmarks page](https://docs.codeonym.work/projects/mediary/en/stable/benchmarks/)). Every async test runs
 twice, under asyncio and under trio, through AnyIO's pytest plugin. To test another Python
 version: `uv run --isolated --python 3.14 pytest`.
 
@@ -109,7 +109,7 @@ Keep a PR to one issue. Fill in the PR template's checklist.
 
 ## Deprecating a name
 
-The [stability policy](https://docs.codeonym.work/projects/mediary/stability/) says what the
+The [stability policy](https://docs.codeonym.work/projects/mediary/en/stable/stability/) says what the
 public API is, and that a public name is deprecated before it is removed or renamed. The helpers
 in `src/mediary/_deprecation.py` keep the old name working, with a `DeprecationWarning` that
 names the replacement:

@@ -409,7 +409,7 @@ from fastapi.testclient import TestClient  # try it
 assert TestClient(app).get("/stock/book").json() == 3
 ```
 
-**OpenTelemetry** (`mediary[otel]`): `mediator.use(TracingBehavior())` opens a span around every `send`, `publish` and `stream`, nested under the caller's span, with errors recorded. See [the docs](https://docs.codeonym.work/projects/mediary/integrations/otel/) for setup.
+**OpenTelemetry** (`mediary[otel]`): `mediator.use(TracingBehavior())` opens a span around every `send`, `publish` and `stream`, nested under the caller's span, with errors recorded. See [the docs](https://docs.codeonym.work/projects/mediary/en/stable/integrations/otel/) for setup.
 
 ## Why not register by hand?
 
@@ -426,7 +426,7 @@ Most mediator libraries have you register each request with its handler, and eac
 
 ## Stability
 
-mediary is in Beta. The public API is what the [API reference](https://docs.codeonym.work/projects/mediary/reference/mediary/) documents. Before 1.0, a minor release changes it only after a deprecation, and deprecated names keep working, with a warning, until 1.0. See the [stability policy](https://docs.codeonym.work/projects/mediary/stability/) for the details and for Python support.
+mediary is in Beta. The public API is what the [API reference](https://docs.codeonym.work/projects/mediary/en/stable/reference/mediary/) documents. Before 1.0, a minor release changes it only after a deprecation, and deprecated names keep working, with a warning, until 1.0. See the [stability policy](https://docs.codeonym.work/projects/mediary/en/stable/stability/) for the details and for Python support.
 
 ## Development
 

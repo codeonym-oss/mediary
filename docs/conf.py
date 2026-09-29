@@ -1,5 +1,6 @@
 """Sphinx configuration: MyST pages, autodoc API reference, Shibuya theme."""
 
+import os
 from importlib.metadata import version as _version
 
 project = "mediary"
@@ -32,7 +33,11 @@ intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
 
 html_theme = "shibuya"
 html_title = "mediary"
-html_baseurl = "https://docs.codeonym.work/projects/mediary/"
+# Read the Docs serves each version under /en/<version>/ and passes its URL in; the fallback is
+# `stable`, so a local build never points canonical links at a path that 404s.
+html_baseurl = os.environ.get(
+    "READTHEDOCS_CANONICAL_URL", "https://docs.codeonym.work/projects/mediary/en/stable/"
+)
 html_context = {
     "source_type": "github",
     "source_user": "codeonym-oss",
