@@ -105,6 +105,30 @@ Fixes #5
 
 Keep a PR to one issue. Fill in the PR template's checklist.
 
+## Deprecating a name
+
+The [stability policy](https://docs.codeonym.work/projects/mediary/stability/) says what the
+public API is, and that a public name is deprecated before it is removed or renamed. The helpers
+in `src/mediary/_deprecation.py` keep the old name working, with a `DeprecationWarning` that
+names the replacement:
+
+| Deprecating | How |
+|---|---|
+| a module-level name, such as a class | add it to the module's `_DEPRECATED` map, served by `alias()` from the module's `__getattr__`; for type checkers, declare it under `if TYPE_CHECKING:` with `@deprecated` (see `src/mediary/__init__.py`) |
+| an attribute | `old = attribute("old", "new")` in the class body |
+| a parameter name | make the parameter positional-only, and decorate the method with `@positional_only("old")` |
+
+Then:
+
+1. Remove the old name from `__all__`, and use only the new one in the docs, docstrings and
+   README.
+2. List the old name, and what to use instead, under "Deprecated" in the API reference.
+3. Test that the old name still works and warns: see `tests/test_api.py`.
+4. Name the deprecation in the PR title or body, such as
+   `feat: rename Foo to Bar, deprecating Foo (#N)`, so the changelog lists it.
+
+Before 1.0, deprecated names are removed in 1.0, and not before.
+
 ## Documentation
 
 The docs site is built with [Sphinx](https://www.sphinx-doc.org/), the

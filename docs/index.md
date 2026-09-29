@@ -65,6 +65,8 @@ pip install mediary[full]  # with every integration
 
 Start with [Getting started](guide/getting-started.md), or jump to the [recipes](recipes/validation.md) for common pipelines. Every example in these docs runs in CI, as written.
 
+mediary is in Beta: see [Stability](stability.md) for what counts as its public API, how deprecations work, and which Pythons it supports.
+
 ```{toctree}
 :hidden:
 :caption: Guide
@@ -115,6 +117,8 @@ reference/ext-otel
 
 ```{toctree}
 :hidden:
+:caption: Project
 
+stability
 changelog
 ```
