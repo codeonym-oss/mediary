@@ -10,7 +10,7 @@ requires-python = ">=3.11"
 dependencies = []
 keywords = [
     "mediator", "cqrs", "pipeline", "middleware", "command", "query", "notification",
-    "dependency-injection", "asyncio", "anyio", "trio", "dishka", "fastapi",
+    "dependency-injection", "asyncio", "anyio", "trio", "dishka", "fastapi", "opentelemetry",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -45,7 +45,8 @@ mediary = "mediary.pytest_plugin"
 anyio = ["anyio>=4.1"]
 dishka = ["dishka>=1.6"]
 fastapi = ["fastapi>=0.115"]
-full = ["mediary[anyio,dishka,fastapi]"]
+otel = ["opentelemetry-api>=1.20"]
+full = ["mediary[anyio,dishka,fastapi,otel]"]
 
 [build-system]
 requires = ["uv_build>=0.8.22,<0.13"]
@@ -61,8 +62,11 @@ test = [
     "pytest-cov>=7",
     "trio>=0.27",
 ]
+# The OpenTelemetry SDK, whose in-memory exporter the tests of mediary[otel] read spans from.
+test-otel = ["opentelemetry-sdk>=1.20"]
 dev = [
     {include-group = "test"},
+    {include-group = "test-otel"},
     {include-group = "docs"},
     "commitizen>=4.8",
     "pre-commit>=4.3",

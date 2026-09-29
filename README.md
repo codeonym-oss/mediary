@@ -10,7 +10,7 @@ Typed, decorator-driven mediator + CQRS for Python — handlers, pipelines and n
 
 - **Decorate, don't register.** Mark requests with `@request` and handlers with `@handler`; one `mediator.scan("app")` wires the whole package.
 - **Typed end to end.** `await mediator.send(GetUser(1))` is typed as `User`; handlers are plain classes or functions, matched structurally.
-- **Pipelines.** Behaviors (middleware) wrap handlers, targeted by type, Protocol or kind, and ordered. Logging, retry and timeout ship ready-made.
+- **Pipelines.** Behaviors (middleware) wrap handlers, targeted by type, Protocol or kind, and ordered. Logging, retry and timeout ship ready-made, and OpenTelemetry tracing as an extra.
 - **Notifications**, with sequential or concurrent publishing, and **streams** of items from async generators.
 - **CQRS pack.** `@command`, `@query`, `@event`, and senders that can only send one kind.
 - **Pluggable DI**, with ready-made **dishka** and **FastAPI** integrations as extras.
@@ -360,7 +360,7 @@ Stubs stand in for handlers — `mediator.stub(PlaceOrder, raises=CardDeclined()
 
 ## Integrations
 
-Extras plug mediary into DI containers and web frameworks; `pip install mediary[full]` installs them all. Each builds on `mediator.with_resolver(resolver)`, a cheap view of a mediator that shares its handlers and behaviors but resolves through another resolver — one per web request, say.
+Extras plug mediary into DI containers, web frameworks and tracing; `pip install mediary[full]` installs them all. Each builds on `mediator.with_resolver(resolver)`, a cheap view of a mediator that shares its handlers and behaviors but resolves through another resolver — one per web request, say.
 
 **dishka** (`mediary[dishka]`): `MediaryProvider` provides the mediator's handler classes to [dishka](https://github.com/reagento/dishka), and in each request scope a `Mediator` that resolves from it. Handlers then get request-scoped dependencies, such as one database session per request:
 
@@ -408,6 +408,8 @@ from fastapi.testclient import TestClient  # try it
 
 assert TestClient(app).get("/stock/book").json() == 3
 ```
+
+**OpenTelemetry** (`mediary[otel]`): `mediator.use(TracingBehavior())` opens a span around every `send`, `publish` and `stream`, nested under the caller's span, with errors recorded. See [the docs](https://docs.codeonym.work/projects/mediary/integrations/otel/) for setup.
 
 ## Why not register by hand?
 

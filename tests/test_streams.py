@@ -8,6 +8,7 @@ from conftest import MakePackage
 
 from mediary import (
     HandlerNotFound,
+    InvalidBehaviorSignature,
     InvalidHandlerSignature,
     Mediator,
     Next,
@@ -307,6 +308,83 @@ async def test_streams_and_sends_each_get_only_their_own_behaviors() -> None:
     assert await m.send(Ping()) == "pong"
     assert await items(m.stream(Count(1))) == [0]
     assert wrapped == ["send Ping", "stream Count"]
+
+
+class Counting:
+    """Wraps sends with `handle`, and streams with `handle_stream`."""
+
+    def __init__(self, log: Log) -> None:
+        self.log = log
+
+    async def handle(self, request: object, next: Next[T]) -> T:
+        self.log.lines.append(f"send {type(request).__name__}")
+        return await next()
+
+    async def handle_stream(self, request: object, next: NextStream[T]) -> AsyncIterator[T]:
+        self.log.lines.append(f"stream {type(request).__name__}")
+        async for item in next():
+            yield item
+
+
+async def test_one_behavior_can_wrap_sends_and_streams() -> None:
+    resolver = SharedLog()
+    m = Mediator(resolver=resolver)
+    m.register(Count, count)
+    m.register(Ping, ping)
+    counting = Counting(resolver.log)
+    m.use(counting)
+    m.use(counting)  # added once, both ways
+    m.use(behavior(kinds={"request"})(Counting), kinds={"notification"})  # a class, never matches
+    assert await m.send(Ping()) == "pong"
+    assert await items(m.stream(Count(1))) == [0]
+    assert resolver.log.lines == ["send Ping", "stream Count", "count started", "count closed"]
+
+
+async def test_scan_finds_behaviors_that_wrap_sends_and_streams(make_package: MakePackage) -> None:
+    pkg = make_package(
+        {
+            "behaviors.py": """
+                from mediary import behavior
+
+                @behavior(order=5)
+                class Both:
+                    async def handle(self, request, next):
+                        return await next()
+
+                    async def handle_stream(self, request, next):
+                        async for item in next():
+                            yield item
+            """
+        }
+    )
+    m = Mediator()
+    m.scan(pkg)
+    assert sorted(b.streams for b in m._behaviors.values()) == [False, True]  # pyright: ignore[reportPrivateUsage]
+    assert {b.order for b in m._behaviors.values()} == {5}  # pyright: ignore[reportPrivateUsage]
+
+
+class StreamingHandle:
+    async def handle(self, request: object, next: NextStream[Any]) -> AsyncIterator[Any]:
+        yield None
+
+    async def handle_stream(self, request: object, next: NextStream[Any]) -> AsyncIterator[Any]:
+        yield None
+
+
+class ReturningHandleStream:
+    async def handle(self, request: object, next: Next[Any]) -> Any:
+        return await next()
+
+    async def handle_stream(self, request: object, next: Next[Any]) -> Any:
+        return await next()
+
+
+@pytest.mark.parametrize("source", [StreamingHandle, ReturningHandleStream()])
+def test_handle_stream_is_an_async_generator_beside_a_handle_that_isnt(source: Any) -> None:
+    with pytest.raises(
+        InvalidBehaviorSignature, match="`handle_stream` must be an async generator"
+    ):
+        Mediator().use(source)
 
 
 async def test_stream_behaviors_can_target_kinds() -> None:

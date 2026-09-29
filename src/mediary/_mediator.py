@@ -68,7 +68,7 @@ class Mediator:
         self._strategy: PublishStrategy = publish_strategy or Sequential()
         self._bindings: dict[type, Binding] = {}
         self._subscribers: dict[type, dict[object, Binding]] = {}
-        self._behaviors: dict[object, BehaviorBinding] = {}
+        self._behaviors: dict[tuple[object, bool], BehaviorBinding] = {}
         self._pipelines: dict[type, tuple[BehaviorBinding, ...]] = {}
 
     @property
@@ -152,7 +152,7 @@ class Mediator:
             InvalidBehaviorSignature: ``behavior`` has the wrong shape (see ``@behavior``).
 
         """
-        self._add_behaviors([bind_behavior(behavior, order=order, kinds=kinds)])
+        self._add_behaviors(bind_behavior(behavior, order=order, kinds=kinds))
 
     def scan(self, *packages: str | ModuleType) -> None:
         """Import ``packages`` and their submodules; register every ``@handler`` and ``@behavior``.
@@ -174,7 +174,7 @@ class Mediator:
             marker = marker_of(obj)
             try:
                 if marker is not None and marker.kind == "behavior":
-                    behaviors.append(bind_behavior(obj))
+                    behaviors.extend(bind_behavior(obj))
                 else:
                     self._stage(bind(obj), staged)
             except MediaryError as exc:
@@ -221,7 +221,7 @@ class Mediator:
 
     def _add_behaviors(self, behaviors: Iterable[BehaviorBinding]) -> None:
         for binding in behaviors:
-            self._behaviors.setdefault(binding.source, binding)
+            self._behaviors.setdefault((binding.source, binding.streams), binding)
         self._pipelines.clear()
 
     @overload
