@@ -192,8 +192,9 @@ async def test_scan_reports_every_problem_at_once_and_registers_nothing(
                     async def handle(self) -> None: ...
 
                 @handler
-                class SyncHandler:
-                    def handle(self, request: Ping) -> None: ...
+                class SyncGeneratorHandler:
+                    def handle(self, request: Ping):
+                        yield
             """,
             "broken.py": "raise RuntimeError('boom')",
         }
@@ -213,7 +214,7 @@ async def test_scan_reports_every_problem_at_once_and_registers_nothing(
     assert "has no type hint" in messages
     assert "must be hinted with one class" in messages
     assert "must take positional parameters (request)" in messages
-    assert "async def handle" in messages
+    assert "it is a sync generator" in messages
     runtime_error = next(error for error in errors if isinstance(error, RuntimeError))
     assert f"{pkg}.broken" in "".join(runtime_error.__notes__)
 

@@ -15,7 +15,7 @@ from ._errors import (
     RuleViolation,
     ScanError,
 )
-from ._handlers import Handler, StreamHandler, handler
+from ._handlers import Handler, StreamHandler, SyncHandler, handler
 from ._markers import Returns, Yields, notification, request, stream_request
 from ._mediator import Mediator
 from ._publishing import Concurrent, PublishStrategy, Sequential
@@ -49,6 +49,7 @@ __all__ = [
     "Stream",
     "StreamBehavior",
     "StreamHandler",
+    "SyncHandler",
     "TransientError",
     "Yields",
     "__version__",

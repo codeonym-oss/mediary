@@ -49,6 +49,10 @@ Decorators and bases that declare messages and what they return.
 ```
 
 ```{eval-rst}
+.. autoclass:: mediary.SyncHandler
+```
+
+```{eval-rst}
 .. autoclass:: mediary.StreamHandler
 ```
 

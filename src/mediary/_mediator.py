@@ -18,7 +18,7 @@ from ._errors import (
     RuleViolation,
     ScanError,
 )
-from ._handlers import Binding, Handler, StreamHandler, bind
+from ._handlers import Binding, Handler, StreamHandler, SyncHandler, bind
 from ._markers import (
     HandlerInfo,
     Lifetime,
@@ -100,17 +100,17 @@ class Mediator:
         self,
         request_type: type[_Req],
         handler: type[Handler[_Req, Any]]
+        | type[SyncHandler[_Req, Any]]
         | type[StreamHandler[_Req, Any]]
-        | Callable[Concatenate[_Req, ...], Awaitable[Any]]
-        | Callable[Concatenate[_Req, ...], AsyncIterator[Any]],
+        | Callable[Concatenate[_Req, ...], Any],
     ) -> None:
-        """Register ``handler``, a handler class or async function, for ``request_type``.
+        """Register ``handler``, a handler class or function, for ``request_type``.
 
         ``request_type`` is a request or a stream request, which has exactly one handler, or a
         notification, which has any number. A stream request's handler is an async generator.
-        A class handler is resolved for every call, unless it is decorated with
-        ``@handler(lifetime="singleton")``. Registering the same handler for the same type again
-        changes nothing.
+        A sync handler (a plain ``def``) runs on a worker thread. A class handler is resolved
+        for every call, unless it is decorated with ``@handler(lifetime="singleton")``.
+        Registering the same handler for the same type again changes nothing.
 
         Raises:
             NotARequest: ``request_type`` isn't decorated with ``@request`` or ``@notification``.
