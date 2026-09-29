@@ -120,5 +120,6 @@ reference/ext-otel
 :caption: Project
 
 stability
+benchmarks
 changelog
 ```

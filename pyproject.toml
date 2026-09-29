@@ -107,7 +107,7 @@ name = "cz_conventional_commits"
 allowed_prefixes = ["Merge", "Revert", "fixup!", "squash!"]
 
 [tool.pyright]
-include = ["src", "tests", "scripts"]
+include = ["src", "tests", "scripts", "benchmarks"]
 pythonVersion = "3.11"
 typeCheckingMode = "strict"
 # Every `pyright: ignore` must still be needed, so tests can assert that an error is reported.
