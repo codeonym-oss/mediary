@@ -7,7 +7,7 @@ from functools import partial
 from typing import Any, Protocol, TypeVar, get_args, overload
 
 from ._concurrency import run_sync
-from ._errors import InvalidHandlerSignature
+from ._errors import InvalidHandler
 from ._markers import Kind, Lifetime, Marker, mark, marker_of
 from ._resolving import Resolver, Shape, resolve, shape
 
@@ -215,7 +215,7 @@ def bind(source: Any, request_type: type | None = None) -> Binding:
     the handler's module.
 
     Raises:
-        InvalidHandlerSignature: the handler isn't a function or a class with a ``handle``
+        InvalidHandler: the handler isn't a function or a class with a ``handle``
             method, is a sync generator, or a hint it needs is missing, unresolvable or (for the
             request) not a single class.
 
@@ -228,18 +228,14 @@ def bind(source: Any, request_type: type | None = None) -> Binding:
         handle = _require_handler(
             source, getattr(source, "handle", None), "a `handle(self, request)` method"
         )
-        params = shape(
-            source, handle, leading=("request",), method=True, error=InvalidHandlerSignature
-        )
+        params = shape(source, handle, leading=("request",), method=True, error=InvalidHandler)
         streams = inspect.isasyncgenfunction(handle)
         invoke = _class_invoker(source, lifetime, streams, _is_sync(handle))
     else:
         function = _require_handler(source, source, "to be a function or a class")
         if lifetime != "transient":
-            raise InvalidHandlerSignature(source, "only class handlers have a lifetime")
-        params = shape(
-            source, function, leading=("request",), method=False, error=InvalidHandlerSignature
-        )
+            raise InvalidHandler(source, "only class handlers have a lifetime")
+        params = shape(source, function, leading=("request",), method=False, error=InvalidHandler)
         streams = inspect.isasyncgenfunction(function)
         invoke = _function_invoker(function, params, streams, _is_sync(function))
     if request_type is None:
@@ -255,13 +251,13 @@ def _is_sync(fn: Callable[..., Any]) -> bool:
 def _require_handler(source: Any, fn: Any, needs: str) -> Callable[..., Any]:
     """Return ``fn`` if it can handle a request, sync or async, else raise."""
     if inspect.isgeneratorfunction(fn):
-        raise InvalidHandlerSignature(
+        raise InvalidHandler(
             source,
             "it is a sync generator; the handlers of stream requests must be async generators "
             "(`async def` with `yield`)",
         )
     if not (inspect.isfunction(fn) or inspect.ismethod(fn)):
-        raise InvalidHandlerSignature(source, f"it needs {needs}")
+        raise InvalidHandler(source, f"it needs {needs}")
     return fn
 
 
@@ -269,13 +265,13 @@ def _request_hint(source: Any, params: Shape) -> type:
     hint = params.hint(0)
     name = params.leading[0].name
     if hint is None:
-        raise InvalidHandlerSignature(
+        raise InvalidHandler(
             source,
             f"the request parameter `{name}` has no type hint; annotate it, or name the request "
             "with @handler(SomeRequest)",
         )
     if not isinstance(hint, type):
-        raise InvalidHandlerSignature(
+        raise InvalidHandler(
             source, f"the request parameter `{name}` must be hinted with one class, not {hint!r}"
         )
     return hint

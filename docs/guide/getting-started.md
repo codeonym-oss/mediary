@@ -195,8 +195,8 @@ Every error mediary raises is a `MediaryError`:
 |---|---|
 | `HandlerNotFound` | `send` or `stream` finds no handler for the request's exact type |
 | `DuplicateHandler` | a request would get a second handler |
-| `NotARequest`, `NotANotification` | a type isn't decorated as the right kind of message |
-| `InvalidHandlerSignature`, `InvalidBehaviorSignature` | a handler or behavior has the wrong shape |
+| `NotAMessage`, `NotANotification` | a type isn't decorated as the right kind of message |
+| `InvalidHandler`, `InvalidBehavior` | a handler or behavior has the wrong shape |
 | `RuleViolation` | a handler breaks a rule of its message's kind (see [custom kinds](custom-kinds.md)) |
 | `ScanError` | `scan` found problems; they are in `.errors` |
 | `HandlerTimeout` | a `TimeoutBehavior` gave up on a handler |

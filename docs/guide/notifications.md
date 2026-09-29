@@ -86,20 +86,24 @@ assert sent[-1] == "logs flushed"  # ran despite the other handler failing
 
 ## Your own strategy
 
-A `PublishStrategy` has one method, `publish(handlers)`, which gets each handler as a no-argument async callable. Here is one that logs failures and carries on:
+A `PublishStrategy` has one method, `publish(calls)`, which gets a `NotificationCall` for each handler: `await call()` runs the handler, `call.handler` is the handler as it was registered, and `call.notification` the notification. Here is one that logs failures and carries on:
 
 ```python
 import logging
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Sequence
+
+from mediary import NotificationCall
 
 
 class BestEffort:
-    async def publish(self, handlers: Sequence[Callable[[], Awaitable[object]]]) -> None:
-        for run in handlers:
+    async def publish(self, calls: Sequence[NotificationCall], /) -> None:
+        for call in calls:
             try:
-                await run()
+                await call()
             except Exception:
-                logging.getLogger("events").exception("a handler failed")
+                logging.getLogger("events").exception(
+                    "%s failed on %r", call.handler.__name__, call.notification
+                )
 
 
 mediator = Mediator(publish_strategy=BestEffort())

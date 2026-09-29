@@ -14,6 +14,16 @@ The mediator, and the streams it returns.
 .. autoclass:: mediary.Stream
 ```
 
+The narrow views of a mediator that code can depend on instead:
+
+```{eval-rst}
+.. autoclass:: mediary.Sender
+```
+
+```{eval-rst}
+.. autoclass:: mediary.Publisher
+```
+
 ## Messages
 
 Decorators and bases that declare messages and what they return.
@@ -97,6 +107,10 @@ An alias of `Callable[[], AsyncIterator[R]]`.
 ```
 
 ```{eval-rst}
+.. autoclass:: mediary.NotificationCall
+```
+
+```{eval-rst}
 .. autoclass:: mediary.Sequential
 ```
 
@@ -118,7 +132,7 @@ Mark errors as transient, for `RetryBehavior`.
 
 ## Errors
 
-Every error mediary raises is a `MediaryError`.
+Every error mediary raises about messages, handlers and behaviors is a `MediaryError`, and also the closest built-in exception, such as `LookupError` or `TypeError`. An invalid argument raises a plain `ValueError` or `TypeError`.
 
 ```{eval-rst}
 .. autoexception:: mediary.MediaryError
@@ -133,7 +147,7 @@ Every error mediary raises is a `MediaryError`.
 ```
 
 ```{eval-rst}
-.. autoexception:: mediary.NotARequest
+.. autoexception:: mediary.NotAMessage
 ```
 
 ```{eval-rst}
@@ -141,11 +155,11 @@ Every error mediary raises is a `MediaryError`.
 ```
 
 ```{eval-rst}
-.. autoexception:: mediary.InvalidHandlerSignature
+.. autoexception:: mediary.InvalidHandler
 ```
 
 ```{eval-rst}
-.. autoexception:: mediary.InvalidBehaviorSignature
+.. autoexception:: mediary.InvalidBehavior
 ```
 
 ```{eval-rst}
@@ -159,3 +173,17 @@ Every error mediary raises is a `MediaryError`.
 ```{eval-rst}
 .. autoexception:: mediary.HandlerTimeout
 ```
+
+## Deprecated
+
+These names still work, with a `DeprecationWarning` that names the replacement, and will be removed in 1.0.
+
+| Deprecated | Use |
+|---|---|
+| `NotARequest` | `NotAMessage` |
+| `InvalidHandlerSignature` | `InvalidHandler` |
+| `InvalidBehaviorSignature` | `InvalidBehavior` |
+| `.cls` of `NotAMessage` and `NotANotification` | `.message_type` |
+| `.request_type` of `HandlerNotFound` and `DuplicateHandler` | `.message_type` |
+| `Mediator.register(request_type=..., handler=...)` | `register(message_type, handler)`: both are positional-only |
+| `RecordingMediator.sent_of(request_type=...)`, `published_of(notification_type=...)`, `streamed_of(request_type=...)` | pass the type positionally |

@@ -1,4 +1,5 @@
 import logging
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any, ClassVar
 
@@ -10,9 +11,11 @@ from mediary import (
     Mediator,
     Returns,
     TransientError,
+    Yields,
     notification,
     request,
     retryable,
+    stream_request,
 )
 from mediary.behaviors import LoggingBehavior, RetryBehavior, TimeoutBehavior
 
@@ -27,6 +30,20 @@ class Work(Returns[str]):
 @dataclass(frozen=True)
 class Happened:
     pass
+
+
+@stream_request
+@dataclass(frozen=True)
+class Numbers(Yields[int]):
+    count: int
+    fail_after: int | None = None
+
+
+async def numbers(request: Numbers) -> AsyncIterator[int]:
+    for n in range(request.count):
+        if n == request.fail_after:
+            raise ValueError("bad")
+        yield n
 
 
 class Script:
@@ -150,6 +167,54 @@ async def test_logging_labels_undecorated_messages() -> None:
 
     await LoggingBehavior(logger, clock=Clock(0.0, 0.0)).handle(object(), next)
     assert seen == ["message"]
+
+
+def streaming(*ticks: float, **options: Any) -> Mediator:
+    m = Mediator()
+    m.register(Numbers, numbers)
+    m.use(logging_behavior(*ticks, **options))
+    return m
+
+
+async def test_logging_records_a_stream_until_it_ends(logs: pytest.LogCaptureFixture) -> None:
+    async with streaming(1.0, 1.5).stream(Numbers(3)) as items:
+        assert [n async for n in items] == [0, 1, 2]
+    start, done = logs.records
+    assert start.getMessage() == "stream_request test_builtin_behaviors.Numbers started"
+    assert (done.levelno, done.getMessage()) == (
+        logging.INFO,
+        "stream_request test_builtin_behaviors.Numbers completed in 500.0ms",
+    )
+    assert done.__dict__["mediary_items"] == 3
+
+
+async def test_logging_records_a_stream_closed_early(logs: pytest.LogCaptureFixture) -> None:
+    async with streaming(0.0, 0.1).stream(Numbers(10)) as items:
+        async for n in items:
+            if n == 1:
+                break
+    done = logs.records[-1]
+    assert (
+        done.getMessage() == "stream_request test_builtin_behaviors.Numbers closed early in 100.0ms"
+    )
+    assert done.__dict__["mediary_items"] == 2
+
+
+async def test_logging_records_a_failed_stream(logs: pytest.LogCaptureFixture) -> None:
+    received: list[int] = []
+
+    async def consume() -> None:
+        async with streaming(0.0, 2.0, slow_after=1.0).stream(Numbers(5, fail_after=2)) as items:
+            async for n in items:
+                received.append(n)  # noqa: PERF401 - keeps the items before the error
+
+    with pytest.raises(ValueError, match="bad"):
+        await consume()
+    assert received == [0, 1]
+    failed = logs.records[-1]
+    assert failed.levelno == logging.ERROR
+    assert failed.getMessage().endswith("failed after 2000.0ms")
+    assert failed.__dict__["mediary_items"] == 2
 
 
 def test_logging_defaults_to_the_mediary_logger() -> None:

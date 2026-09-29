@@ -11,8 +11,8 @@ from mediary import (
     HandlerNotFound,
     Mediator,
     Next,
+    NotAMessage,
     NotANotification,
-    NotARequest,
     Sequential,
     handler,
     notification,
@@ -211,5 +211,5 @@ def test_handlers_need_a_request_or_notification() -> None:
 
     async def handle(message: Plain) -> None: ...
 
-    with pytest.raises(NotARequest, match="@notification"):
+    with pytest.raises(NotAMessage, match="@notification"):
         Mediator().register(Plain, handle)

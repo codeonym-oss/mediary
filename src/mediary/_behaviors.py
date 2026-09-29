@@ -1,4 +1,4 @@
-"""Pipeline behaviors: middleware around handlers, and which requests each one wraps."""
+"""Pipeline behaviors: middleware around handlers, and which messages each one wraps."""
 
 import inspect
 import sys
@@ -8,8 +8,8 @@ from collections.abc import AsyncIterator, Awaitable, Callable, Iterable
 from dataclasses import dataclass
 from typing import Any, Protocol, TypeAlias, TypeVar, Union, overload
 
-from ._errors import InvalidBehaviorSignature
-from ._markers import Kind, Marker, kind_of, mark, marker_of
+from ._errors import InvalidBehavior
+from ._markers import Kind, Marker, kind_named, kind_of, mark, marker_of
 from ._resolving import Resolver, Shape, require_async, resolve, shape
 
 _R = TypeVar("_R")
@@ -23,7 +23,7 @@ NextStream: TypeAlias = Callable[[], AsyncIterator[_R]]
 
 
 class Behavior(Protocol[_Req_contra, _R]):
-    """The shape of a class behavior: an async ``handle`` taking the request and ``next``.
+    """The shape of a class behavior: an async ``handle`` taking the message and ``next``.
 
     A behavior runs code around the rest of the pipeline. It may call ``next()`` any number of
     times (zero to short-circuit, more to retry) and may change the result.
@@ -32,17 +32,17 @@ class Behavior(Protocol[_Req_contra, _R]):
         .. code-block:: python
 
             class Timing:
-                async def handle(self, request: object, next: Next[T]) -> T:
+                async def handle(self, message: object, next: Next[T]) -> T:
                     started = time.perf_counter()
                     try:
                         return await next()
                     finally:
-                        log(type(request), time.perf_counter() - started)
+                        log(type(message), time.perf_counter() - started)
 
     """
 
-    async def handle(self, request: _Req_contra, next: Next[_R], /) -> _R:
-        """Handle ``request``, usually by awaiting ``next()``."""
+    async def handle(self, message: _Req_contra, next: Next[_R], /) -> _R:
+        """Handle ``message``, usually by awaiting ``next()``."""
         ...
 
 
@@ -57,17 +57,17 @@ class StreamBehavior(Protocol[_Req_contra, _R]):
         .. code-block:: python
 
             class Counting:
-                async def handle(self, request: object, next: NextStream[T]) -> AsyncIterator[T]:
+                async def handle(self, message: object, next: NextStream[T]) -> AsyncIterator[T]:
                     count = 0
                     async for item in next():
                         count += 1
                         yield item
-                    log(type(request), count)
+                    log(type(message), count)
 
     """
 
-    def handle(self, request: _Req_contra, next: NextStream[_R], /) -> AsyncIterator[_R]:
-        """Yield the items of ``request``, usually those of ``next()``."""
+    def handle(self, message: _Req_contra, next: NextStream[_R], /) -> AsyncIterator[_R]:
+        """Yield the items of ``message``, usually those of ``next()``."""
         ...
 
 
@@ -88,16 +88,16 @@ def behavior(*, order: int = 0, kinds: Iterable[str] | None = None) -> Callable[
 def behavior(target: Any = None, /, *, order: int = 0, kinds: Iterable[str] | None = None) -> Any:
     """Mark a class or async function as a pipeline behavior, so ``Mediator.scan`` adds it.
 
-    A behavior wraps the requests its request parameter's hint matches: every request when the
+    A behavior wraps the messages its message parameter's hint matches: every message when the
     hint is missing, ``object`` or ``Any``; subclasses of a class; classes that have every member
-    of a Protocol; or any member of a union. ``kinds`` further limits it to requests whose
-    decorator has one of those kinds, such as ``{"request"}``.
+    of a Protocol; or any member of a union. ``kinds`` further limits it to messages of the
+    kinds it names, such as ``{"request"}``; a name that isn't a defined kind is an error.
 
     A behavior whose ``handle`` (or the function itself) is an async generator is a stream
     behavior: it wraps only stream requests, and gets ``next`` as a ``NextStream``. Every other
-    behavior wraps only the requests and notifications that are sent or published. A class
-    whose async ``handle`` wraps those can wrap streams too, with an async generator
-    ``handle_stream(self, request, next)``; the two share the class's ``order`` and ``kinds``.
+    behavior wraps only the messages that are sent or published. A class whose async ``handle``
+    wraps those can wrap streams too, with an async generator
+    ``handle_stream(self, message, next)``; the two share the class's ``order`` and ``kinds``.
 
     Behaviors with a lower ``order`` run outside those with a higher one; ties are ordered by
     fully qualified name. A class behavior is resolved through the ``Resolver`` for every send.
@@ -108,10 +108,10 @@ def behavior(target: Any = None, /, *, order: int = 0, kinds: Iterable[str] | No
 
             @behavior(order=-10)
             class Logging:
-                async def handle(self, request: object, next: Next[T]) -> T: ...
+                async def handle(self, message: object, next: Next[T]) -> T: ...
 
             @behavior(kinds={"request"})
-            async def in_transaction(request: object, next: Next[T], db: Database) -> T: ...
+            async def in_transaction(message: object, next: Next[T], db: Database) -> T: ...
 
     Raises:
         TypeError: ``kinds`` is a single string rather than a collection of them.
@@ -152,7 +152,7 @@ def behavior_for(kind: Kind) -> BehaviorDecorator:
             report_behavior = behavior_for(report)
 
             @report_behavior(order=-10)
-            async def audit(request: object, next: Next[T]) -> T: ...
+            async def audit(message: object, next: Next[T]) -> T: ...
 
     """
 
@@ -170,7 +170,7 @@ def _kinds(kinds: Iterable[str] | None) -> frozenset[str] | None:
 
 
 InvokeBehavior = Callable[[Any, Any, Resolver], Awaitable[Any]]
-"""Calls a behavior with ``(request, next, resolver)``; a stream behavior's returns an iterator."""
+"""Calls a behavior with ``(message, next, resolver)``; a stream behavior's returns an iterator."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -200,7 +200,7 @@ class BehaviorBinding:
         return self.targets is None or any(_matches(request_type, t) for t in self.targets)
 
 
-_LEADING = ("request", "next")
+_LEADING = ("message", "next")
 
 
 def bind_behavior(
@@ -212,55 +212,56 @@ def bind_behavior(
     There is one binding, or two for a class with both ``handle`` and ``handle_stream``.
 
     Raises:
-        InvalidBehaviorSignature: it isn't an async function, or a class or instance with an
-            async ``handle`` taking ``(request, next)``, or its ``handle_stream`` isn't an async
+        InvalidBehavior: it isn't an async function, or a class or instance with an
+            async ``handle`` taking ``(message, next)``, or its ``handle_stream`` isn't an async
             generator beside a ``handle`` that isn't one, or its hints are unresolvable or
-            target no class.
+            target no class, or ``kinds`` names a kind that isn't defined.
 
     """
     marker = marker_of(source)
     order = order if order is not None else marker.order if marker is not None else 0
-    kinds = _kinds(kinds) if kinds is not None else marker.kinds if marker else None
+    names = _kinds(kinds) if kinds is not None else marker.kinds if marker else None
+    unknown = sorted(name for name in names or () if kind_named(name) is None)
+    if unknown:
+        raise InvalidBehavior(
+            source, f"`kinds` names no defined kind: {', '.join(map(repr, unknown))}"
+        )
     if not isinstance(source, type) and (
         inspect.isfunction(source) or not hasattr(source, "handle")
     ):
         function = require_async(
-            source, source, "to be an `async def` function or a class", InvalidBehaviorSignature
+            source, source, "to be an `async def` function or a class", InvalidBehavior
         )
-        params = shape(
-            source, function, leading=_LEADING, method=False, error=InvalidBehaviorSignature
-        )
+        params = shape(source, function, leading=_LEADING, method=False, error=InvalidBehavior)
         streams = inspect.isasyncgenfunction(function)
         invoke = _function_invoker(function, params, streams)
-        return [_binding(source, source, order, kinds, params, invoke, streams)]
+        return [_binding(source, source, order, names, params, invoke, streams)]
     cls = source if isinstance(source, type) else type(source)
     handle = require_async(
         source,
         getattr(cls, "handle", None),
-        "an `async def handle(self, request, next)`",
-        InvalidBehaviorSignature,
+        "an `async def handle(self, message, next)`",
+        InvalidBehavior,
     )
     methods = [("handle", handle)]
     handle_stream = getattr(cls, "handle_stream", None)
     if handle_stream is not None:
         if inspect.isasyncgenfunction(handle) or not inspect.isasyncgenfunction(handle_stream):
-            raise InvalidBehaviorSignature(
+            raise InvalidBehavior(
                 source,
                 "`handle_stream` must be an async generator, beside a `handle` that isn't one",
             )
         methods.append(("handle_stream", handle_stream))
     bindings: list[BehaviorBinding] = []
     for name, method in methods:
-        params = shape(
-            source, method, leading=_LEADING, method=True, error=InvalidBehaviorSignature
-        )
+        params = shape(source, method, leading=_LEADING, method=True, error=InvalidBehavior)
         streams = inspect.isasyncgenfunction(method)
         invoke = (
             _class_invoker(source, name, streams)
             if source is cls
             else _instance_invoker(source, name, streams)
         )
-        bindings.append(_binding(source, cls, order, kinds, params, invoke, streams))
+        bindings.append(_binding(source, cls, order, names, params, invoke, streams))
     return bindings
 
 
@@ -299,9 +300,9 @@ def _targets(source: Any, params: Shape) -> tuple[type, ...] | None:
     members = typing.get_args(hint) if typing.get_origin(hint) in (Union, types.UnionType) else ()
     targets = members or (hint,)
     if not all(isinstance(t, type) for t in targets):
-        raise InvalidBehaviorSignature(
+        raise InvalidBehavior(
             source,
-            f"the request parameter `{params.leading[0].name}` must be hinted with a class, a "
+            f"the message parameter `{params.leading[0].name}` must be hinted with a class, a "
             f"Protocol or a union of them, not {hint!r}",
         )
     return targets

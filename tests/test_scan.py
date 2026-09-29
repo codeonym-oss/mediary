@@ -8,9 +8,9 @@ from conftest import MakePackage
 from mediary import (
     DuplicateHandler,
     HandlerNotFound,
-    InvalidHandlerSignature,
+    InvalidHandler,
     Mediator,
-    NotARequest,
+    NotAMessage,
     ScanError,
     handler,
     request,
@@ -163,7 +163,7 @@ async def test_scan_reports_every_problem_at_once_and_registers_nothing(
                 from mediary import handler
                 from .requests import GetGreeting, Ping
 
-                class NotARequest:
+                class NotAMessage:
                     pass
 
                 @handler
@@ -173,7 +173,7 @@ async def test_scan_reports_every_problem_at_once_and_registers_nothing(
 
                 @handler
                 class UnmarkedTargetHandler:
-                    async def handle(self, request: NotARequest) -> None: ...
+                    async def handle(self, request: NotAMessage) -> None: ...
 
                 @handler
                 class UnresolvedHandler:
@@ -207,8 +207,8 @@ async def test_scan_reports_every_problem_at_once_and_registers_nothing(
     kinds = [type(error) for error in errors]
     assert kinds.count(RuntimeError) == 1
     assert kinds.count(DuplicateHandler) == 1
-    assert kinds.count(NotARequest) == 1
-    assert kinds.count(InvalidHandlerSignature) == 5
+    assert kinds.count(NotAMessage) == 1
+    assert kinds.count(InvalidHandler) == 5
     messages = "\n".join(str(error) for error in errors)
     assert "cannot resolve its type hints" in messages
     assert "has no type hint" in messages

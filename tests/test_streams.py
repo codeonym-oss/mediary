@@ -8,8 +8,8 @@ from conftest import MakePackage
 
 from mediary import (
     HandlerNotFound,
-    InvalidBehaviorSignature,
-    InvalidHandlerSignature,
+    InvalidBehavior,
+    InvalidHandler,
     Mediator,
     Next,
     NextStream,
@@ -214,7 +214,7 @@ async def _yields_for_notification(event: Happened) -> AsyncIterator[None]:
 def test_only_stream_requests_have_async_generator_handlers(
     message: type, function: Any, reason: str
 ) -> None:
-    with pytest.raises(InvalidHandlerSignature, match=reason):
+    with pytest.raises(InvalidHandler, match=reason):
         Mediator().register(message, function)
 
 
@@ -381,14 +381,12 @@ class ReturningHandleStream:
 
 @pytest.mark.parametrize("source", [StreamingHandle, ReturningHandleStream()])
 def test_handle_stream_is_an_async_generator_beside_a_handle_that_isnt(source: Any) -> None:
-    with pytest.raises(
-        InvalidBehaviorSignature, match="`handle_stream` must be an async generator"
-    ):
+    with pytest.raises(InvalidBehavior, match="`handle_stream` must be an async generator"):
         Mediator().use(source)
 
 
 async def test_stream_behaviors_can_target_kinds() -> None:
-    @behavior(kinds={"feed_only"})
+    @behavior(kinds={"notification"})
     async def never(request: object, next: NextStream[Any]) -> AsyncIterator[Any]:
         yield "wrong"
 

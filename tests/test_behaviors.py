@@ -7,7 +7,7 @@ from conftest import MakePackage
 
 from mediary import (
     HandlerNotFound,
-    InvalidBehaviorSignature,
+    InvalidBehavior,
     Mediator,
     Next,
     Returns,
@@ -290,15 +290,15 @@ class _NoHandle:
 @pytest.mark.parametrize(
     ("invalid", "reason"),
     [
-        (_no_next, r"positional parameters \(request, next\)"),
-        (_keyword_next, r"positional parameters \(request, next\)"),
+        (_no_next, r"positional parameters \(message, next\)"),
+        (_keyword_next, r"positional parameters \(message, next\)"),
         (_generic_hint, "a class, a Protocol or a union"),
         (_not_async, "`async def` function"),
-        (_NoHandle, r"async def handle\(self, request, next\)"),
+        (_NoHandle, r"async def handle\(self, message, next\)"),
     ],
 )
 def test_invalid_behaviors_are_rejected(invalid: Any, reason: str) -> None:
-    with pytest.raises(InvalidBehaviorSignature, match=reason):
+    with pytest.raises(InvalidBehavior, match=reason):
         Mediator().use(invalid)
 
 
@@ -318,4 +318,4 @@ def test_scan_reports_invalid_behaviors(make_package: MakePackage) -> None:
     )
     with pytest.raises(ScanError) as exc:
         Mediator().scan(pkg)
-    assert [type(e) for e in exc.value.errors] == [InvalidBehaviorSignature] * 2
+    assert [type(e) for e in exc.value.errors] == [InvalidBehavior] * 2

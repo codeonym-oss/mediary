@@ -10,7 +10,7 @@ from conftest import MakePackage
 
 from mediary import (
     DuplicateHandler,
-    InvalidHandlerSignature,
+    InvalidHandler,
     Mediator,
     Returns,
     handler,
@@ -230,7 +230,7 @@ INVALID_FUNCTIONS: list[tuple[Callable[..., Any], str]] = [
 
 @pytest.mark.parametrize(("function", "reason"), INVALID_FUNCTIONS)
 def test_invalid_function_handlers_are_rejected(function: Callable[..., Any], reason: str) -> None:
-    with pytest.raises(InvalidHandlerSignature, match=reason):
+    with pytest.raises(InvalidHandler, match=reason):
         Mediator().register(Greet, function)
 
 

@@ -128,8 +128,8 @@ calls = []
 
 
 @behavior(order=-10)  # lower orders run further out
-async def trace(request: object, next: Next[object]) -> object:
-    calls.append(f"-> {type(request).__name__}")
+async def trace(message: object, next: Next[object]) -> object:
+    calls.append(f"-> {type(message).__name__}")
     result = await next()
     calls.append(f"<- {result}")
     return result
@@ -150,7 +150,7 @@ assert await mediator.send(CheckStock("book")) == 3  # double_orders only wraps 
 assert calls == ["-> PlaceOrder", "<- 84", "-> CheckStock", "<- 3"]
 ```
 
-The hint on the request parameter picks what a behavior wraps: `object` for everything, a class for it and its subclasses, a `Protocol` for every request with those members, or a union. `kinds={"request"}` narrows it to kinds of message, and lower `order`s run further out (ties are broken by name).
+The hint on the message parameter picks what a behavior wraps: `object` for everything, a class for it and its subclasses, a `Protocol` for every message with those members, or a union. `kinds={"request"}` narrows it to kinds of message, and lower `order`s run further out (ties are broken by name).
 
 Three ready-made behaviors cover production basics. They are never scanned; add them configured:
 

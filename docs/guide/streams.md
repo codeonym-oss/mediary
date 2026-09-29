@@ -95,16 +95,16 @@ audit = []
 
 
 class Audit:
-    async def handle(self, request: object, next: Next[object]) -> object:
-        audit.append(f"sent {type(request).__name__}")
+    async def handle(self, message: object, next: Next[object]) -> object:
+        audit.append(f"sent {type(message).__name__}")
         return await next()
 
     async def handle_stream(
-        self, request: object, next: NextStream[object]
+        self, message: object, next: NextStream[object]
     ) -> AsyncIterator[object]:
         async for item in next():
             yield item
-        audit.append(f"streamed {type(request).__name__}")
+        audit.append(f"streamed {type(message).__name__}")
 
 
 mediator = Mediator()

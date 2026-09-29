@@ -9,17 +9,19 @@ They are never scanned; add the ones you want, configured, with ``Mediator.use``
     mediator.use(RetryBehavior(max_retries=3), kinds={"request"})
 
 They wrap every message they are added for, so narrow them with ``kinds=`` where it matters:
-retrying is only safe for handlers that can run twice. They run on asyncio, or on trio and
-other event loops through AnyIO (``mediary[anyio]``).
+retrying is only safe for handlers that can run twice. ``LoggingBehavior`` also wraps stream
+requests; ``RetryBehavior`` and ``TimeoutBehavior`` don't, since a stream that is half consumed
+can't be retried, and how long it takes depends on its consumer. They run on asyncio, or on
+trio and other event loops through AnyIO (``mediary[anyio]``).
 """
 
 import logging
 import random
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Any, TypeVar
 
-from ._behaviors import Next
+from ._behaviors import Next, NextStream
 from ._concurrency import Expired, sleep, within
 from ._errors import HandlerTimeout
 from ._markers import marker_of
@@ -44,6 +46,10 @@ class LoggingBehavior:
     Levels: start is DEBUG, completion ``level`` (INFO), completion slower than ``slow_after``
     seconds WARNING, and failure ERROR with the traceback. ``clock`` returns seconds; inject one
     to test timing.
+
+    Streams are logged too, from the first item asked for until the stream ends, fails or is
+    closed early, so their duration includes the consumer's time between items. Their records
+    also carry ``mediary_items``, the number of items yielded.
     """
 
     def __init__(
@@ -64,6 +70,34 @@ class LoggingBehavior:
 
     async def handle(self, message: object, next: Next[_T]) -> _T:
         """Log around the rest of the pipeline."""
+        kind, name, extra = self._start(message)
+        started = self.clock()
+        try:
+            result = await next()
+        except Exception:
+            self._failed(kind, name, extra, started)
+            raise
+        self._completed(kind, name, extra, started, "completed")
+        return result
+
+    async def handle_stream(self, message: object, next: NextStream[_T]) -> AsyncIterator[_T]:
+        """Log around the rest of a stream's pipeline, counting its items."""
+        kind, name, extra = self._start(message)
+        started = self.clock()
+        extra["mediary_items"] = 0
+        try:
+            async for item in next():
+                extra["mediary_items"] += 1
+                yield item
+        except GeneratorExit:
+            self._completed(kind, name, extra, started, "closed early")
+            raise
+        except Exception:
+            self._failed(kind, name, extra, started)
+            raise
+        self._completed(kind, name, extra, started, "completed")
+
+    def _start(self, message: object) -> tuple[str, str, dict[str, Any]]:
         message_type = type(message)
         marker = marker_of(message_type)
         kind = marker.kind if marker is not None else "message"
@@ -74,23 +108,24 @@ class LoggingBehavior:
             "mediary_payload": self._summary(message),
         }
         self.logger.debug("%s %s started", kind, name, extra=extra)
-        started = self.clock()
-        try:
-            result = await next()
-        except Exception:
-            extra["mediary_duration_ms"] = self._elapsed_ms(started)
-            self.logger.exception(
-                "%s %s failed after %.1fms", kind, name, extra["mediary_duration_ms"], extra=extra
-            )
-            raise
+        return kind, name, extra
+
+    def _failed(self, kind: str, name: str, extra: dict[str, Any], started: float) -> None:
+        extra["mediary_duration_ms"] = self._elapsed_ms(started)
+        self.logger.exception(
+            "%s %s failed after %.1fms", kind, name, extra["mediary_duration_ms"], extra=extra
+        )
+
+    def _completed(
+        self, kind: str, name: str, extra: dict[str, Any], started: float, outcome: str
+    ) -> None:
         duration_ms = extra["mediary_duration_ms"] = self._elapsed_ms(started)
         if self.slow_after is not None and duration_ms >= self.slow_after * 1000:
             self.logger.warning("%s %s was slow: %.1fms", kind, name, duration_ms, extra=extra)
         else:
             self.logger.log(
-                self.level, "%s %s completed in %.1fms", kind, name, duration_ms, extra=extra
+                self.level, "%s %s %s in %.1fms", kind, name, outcome, duration_ms, extra=extra
             )
-        return result
 
     def _elapsed_ms(self, started: float) -> float:
         return (self.clock() - started) * 1000
