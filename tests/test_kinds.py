@@ -9,7 +9,7 @@ from mediary import (
     DuplicateHandler,
     Mediator,
     Next,
-    NotARequest,
+    NotAMessage,
     Returns,
     RuleViolation,
     request,
@@ -60,7 +60,7 @@ def test_a_kind_is_not_inherited() -> None:
         return 0
 
     assert kind_of(Monthly) is None
-    with pytest.raises(NotARequest):
+    with pytest.raises(NotAMessage):
         Mediator().register(Monthly, monthly)
 
 

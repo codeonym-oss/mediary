@@ -5,10 +5,10 @@ import pytest
 from mediary import (
     DuplicateHandler,
     HandlerNotFound,
-    InvalidHandlerSignature,
+    InvalidHandler,
     MediaryError,
     Mediator,
-    NotARequest,
+    NotAMessage,
     Returns,
     request,
 )
@@ -97,7 +97,7 @@ async def test_a_new_handler_instance_serves_each_send() -> None:
 async def test_unregistered_request_raises_handler_not_found() -> None:
     with pytest.raises(HandlerNotFound, match=r"test_send\.GetUser.*@request") as exc:
         await Mediator().send(GetUser(1))
-    assert exc.value.request_type is GetUser
+    assert exc.value.message_type is GetUser
     assert isinstance(exc.value, MediaryError)
     assert isinstance(exc.value, LookupError)
 
@@ -135,7 +135,7 @@ def test_handlers_can_only_be_registered_for_requests() -> None:
     class Handler:
         async def handle(self, request: NotMarked) -> None: ...
 
-    with pytest.raises(NotARequest, match="Decorate it with @request"):
+    with pytest.raises(NotAMessage, match="Decorate it with @request"):
         Mediator().register(NotMarked, Handler)
 
 
@@ -144,7 +144,7 @@ def test_subclasses_of_a_request_are_not_requests_unless_decorated() -> None:
     class GetAdmin(GetUser):
         pass
 
-    with pytest.raises(NotARequest):
+    with pytest.raises(NotAMessage):
         Mediator().register(GetAdmin, GetUserHandler)
 
 
@@ -153,5 +153,5 @@ def test_subclasses_of_a_request_are_not_requests_unless_decorated() -> None:
     [type("NoHandle", (), {}), type("NotAMethod", (), {"handle": "pong"})],
 )
 def test_handlers_need_a_handle_method(handler: type) -> None:
-    with pytest.raises(InvalidHandlerSignature, match=r"a `handle\(self, request\)` method"):
+    with pytest.raises(InvalidHandler, match=r"a `handle\(self, request\)` method"):
         Mediator().register(Ping, handler)

@@ -1,6 +1,8 @@
-"""The exceptions mediary raises. All of them derive from ``MediaryError``."""
+"""The exceptions mediary raises about messages, handlers and behaviors: ``MediaryError``s."""
 
 from collections.abc import Sequence
+
+from ._deprecation import attribute
 
 
 def _name(obj: object) -> str:
@@ -8,77 +10,105 @@ def _name(obj: object) -> str:
 
 
 class MediaryError(Exception):
-    """Base class for every error raised by mediary."""
+    """Base class for the errors mediary raises about messages, handlers and behaviors.
+
+    An invalid argument, such as a negative ``RetryBehavior(max_retries=...)``, raises a plain
+    ``ValueError`` or ``TypeError`` instead.
+    """
 
 
 class HandlerNotFound(MediaryError, LookupError):
-    """No handler is registered for the type of the request that was sent."""
+    """No handler is registered for the type of the message that was sent or streamed."""
 
-    def __init__(self, request_type: type) -> None:
-        self.request_type = request_type
+    request_type = attribute("request_type", "message_type")
+
+    def __init__(self, message_type: type) -> None:
+        self.message_type = message_type
         super().__init__(
-            f"No handler registered for {_name(request_type)}. Is the class decorated with "
+            f"No handler registered for {_name(message_type)}. Is the class decorated with "
             "@request, and is its handler registered with this mediator?"
         )
 
 
 class DuplicateHandler(MediaryError, ValueError):
-    """A second handler was registered for a request type that already has one."""
+    """A second handler was registered for a message type that has exactly one."""
 
-    def __init__(self, request_type: type, existing: object, duplicate: object) -> None:
-        self.request_type = request_type
+    request_type = attribute("request_type", "message_type")
+
+    def __init__(self, message_type: type, existing: object, duplicate: object) -> None:
+        self.message_type = message_type
         self.existing = existing
         self.duplicate = duplicate
         super().__init__(
-            f"{_name(request_type)} already has a handler, {_name(existing)}; "
+            f"{_name(message_type)} already has a handler, {_name(existing)}; "
             f"cannot also register {_name(duplicate)}. A request has exactly one handler."
         )
 
 
-class NotARequest(MediaryError, TypeError):
-    """A handler was registered for a class that is neither a request nor a notification."""
+class NotAMessage(MediaryError, TypeError):
+    """A handler was registered for a class that isn't decorated as a kind of message."""
 
-    def __init__(self, cls: type) -> None:
-        self.cls = cls
+    cls = attribute("cls", "message_type")
+
+    def __init__(self, message_type: type) -> None:
+        self.message_type = message_type
         super().__init__(
-            f"{_name(cls)} is not a request. Decorate it with @request, or with @notification "
-            "if it can have many handlers (subclasses must be decorated too)."
+            f"{_name(message_type)} is not a message. Decorate it with @request, or with "
+            "@notification if it can have many handlers (subclasses must be decorated too)."
         )
 
 
 class NotANotification(MediaryError, TypeError):
-    """An object whose class isn't decorated with ``@notification`` was published."""
+    """A message was published whose kind isn't published, such as a request."""
 
-    def __init__(self, cls: type) -> None:
-        self.cls = cls
+    cls = attribute("cls", "message_type")
+
+    def __init__(self, message_type: type) -> None:
+        self.message_type = message_type
         super().__init__(
-            f"{_name(cls)} is not a notification. Decorate it with @notification, or send it "
-            "with `send` if it is a request."
+            f"{_name(message_type)} is not a notification. Decorate it with @notification, or "
+            "send it with `send` if it is a request."
         )
 
 
-class InvalidHandlerSignature(MediaryError, TypeError):
-    """A handler doesn't have the shape mediary can call."""
+class InvalidHandler(MediaryError, TypeError):
+    """A handler can't be called by mediary: it has the wrong shape, or unresolvable hints.
+
+    ``reason`` says why, as the message does after the handler's name.
+    """
 
     def __init__(self, handler: object, reason: str) -> None:
         self.handler = handler
+        self.reason = reason
         super().__init__(f"Invalid handler {_name(handler)}: {reason}")
 
 
-class InvalidBehaviorSignature(MediaryError, TypeError):
-    """A behavior doesn't have the shape mediary can call."""
+class InvalidBehavior(MediaryError, TypeError):
+    """A behavior can't be called by mediary: it has the wrong shape, or unresolvable hints.
+
+    ``reason`` says why, as the message does after the behavior's name.
+    """
 
     def __init__(self, behavior: object, reason: str) -> None:
         self.behavior = behavior
+        self.reason = reason
         super().__init__(f"Invalid behavior {_name(behavior)}: {reason}")
 
 
 class RuleViolation(MediaryError, TypeError):
-    """A handler breaks a rule of its message's kind, such as a query handler returning None."""
+    """A handler breaks a rule of its message's kind, such as a query handler returning None.
 
-    def __init__(self, handler: object, kind: str, reason: str) -> None:
+    ``kind`` is the name of the kind, ``reason`` the rule's explanation, and ``message_type``
+    the message the handler was registered for (None when that isn't known).
+    """
+
+    def __init__(
+        self, handler: object, kind: str, reason: str, message_type: type | None = None
+    ) -> None:
         self.handler = handler
         self.kind = kind
+        self.reason = reason
+        self.message_type = message_type
         super().__init__(f"Handler {_name(handler)} breaks a rule of @{kind}: {reason}")
 
 

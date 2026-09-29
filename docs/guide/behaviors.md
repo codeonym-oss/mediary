@@ -44,8 +44,8 @@ calls = []
 
 
 @behavior(order=-10)  # lower orders run further out
-async def trace(request: object, next: Next[object]) -> object:
-    calls.append(f"-> {type(request).__name__}")
+async def trace(message: object, next: Next[object]) -> object:
+    calls.append(f"-> {type(message).__name__}")
     result = await next()
     calls.append(f"<- {result}")
     return result
@@ -79,7 +79,7 @@ The type hint of the message parameter picks the messages a behavior wraps:
 | a `Protocol` | every message class that has the protocol's members |
 | a union, `A | B` | any of its members |
 
-Then `kinds=` narrows it to kinds of message, by the name of their decorator: `{"request"}`, `{"notification"}`, or the [CQRS](cqrs.md) `{"command"}`, `{"query"}` and `{"event"}`.
+Then `kinds=` narrows it to kinds of message, by the name of their decorator: `{"request"}`, `{"notification"}`, or the [CQRS](cqrs.md) `{"command"}`, `{"query"}` and `{"event"}`. A name that isn't a defined kind, such as a typo, raises `InvalidBehavior` when the behavior is added or scanned, rather than wrapping nothing.
 
 Protocols make behaviors opt-in by shape, with no base class or registry. Every request with an `idempotency_key` gets deduplicated, say:
 
@@ -174,7 +174,7 @@ mediator.use(TimeoutBehavior(seconds=5), order=-50)  # HandlerTimeout when it's 
 mediator.use(RetryBehavior(max_retries=3), kinds={"request"})  # backoff with jitter
 ```
 
-- **`LoggingBehavior`** logs each message's start (DEBUG), completion (INFO, or WARNING when slower than `slow_after`) and failure (ERROR, with the traceback), with structured `extra` fields: `mediary_kind`, `mediary_type`, `mediary_payload` and `mediary_duration_ms`.
+- **`LoggingBehavior`** logs each message's start (DEBUG), completion (INFO, or WARNING when slower than `slow_after`) and failure (ERROR, with the traceback), with structured `extra` fields: `mediary_kind`, `mediary_type`, `mediary_payload` and `mediary_duration_ms`. It logs streams too, with the number of items yielded as `mediary_items`, and says when one was closed early.
 - **`TimeoutBehavior`** cancels the rest of the pipeline after `seconds`, and raises `HandlerTimeout`.
 - **`RetryBehavior`** runs the rest of the pipeline again on transient errors, with exponential backoff and full jitter.
 

@@ -21,6 +21,7 @@ Example:
 from collections.abc import AsyncGenerator, Iterable
 from typing import TYPE_CHECKING, Any, TypeVar, overload
 
+from ._deprecation import positional_only
 from ._markers import Returns, Yields, kind_of
 from ._mediator import Mediator
 from ._publishing import PublishStrategy
@@ -130,14 +131,17 @@ class RecordingMediator(Mediator):
             return super().stream(request)
         return self._through_stream(request, stub)
 
-    def sent_of(self, request_type: type[_T]) -> list[_T]:
-        """Return the sent requests of exactly ``request_type``, in order."""
-        return [r for r in self.sent if type(r) is request_type]
+    @positional_only("request_type")
+    def sent_of(self, message_type: type[_T], /) -> list[_T]:
+        """Return the sent messages of exactly ``message_type``, in order."""
+        return [m for m in self.sent if type(m) is message_type]
 
-    def published_of(self, notification_type: type[_T]) -> list[_T]:
-        """Return the published notifications of exactly ``notification_type``, in order."""
-        return [n for n in self.published if type(n) is notification_type]
+    @positional_only("notification_type")
+    def published_of(self, message_type: type[_T], /) -> list[_T]:
+        """Return the published messages of exactly ``message_type``, in order."""
+        return [m for m in self.published if type(m) is message_type]
 
-    def streamed_of(self, request_type: type[_T]) -> list[_T]:
-        """Return the streamed requests of exactly ``request_type``, in order."""
-        return [r for r in self.streamed if type(r) is request_type]
+    @positional_only("request_type")
+    def streamed_of(self, message_type: type[_T], /) -> list[_T]:
+        """Return the streamed messages of exactly ``message_type``, in order."""
+        return [m for m in self.streamed if type(m) is message_type]

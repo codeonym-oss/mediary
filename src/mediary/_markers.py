@@ -171,6 +171,11 @@ def define_kind(name: str, *, dispatch: Dispatch, rules: Iterable[HandlerRule] =
     return kind
 
 
+def kind_named(name: str) -> Kind | None:
+    """Return the kind defined as ``name``, or None."""
+    return _KINDS.get(name)
+
+
 def kind_of(cls: type) -> Kind | None:
     """Return the kind ``cls`` itself is decorated as, or None if it isn't a message."""
     marker = marker_of(cls)

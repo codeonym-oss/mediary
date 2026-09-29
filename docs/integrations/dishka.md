@@ -11,7 +11,7 @@ pip install mediary[dishka]
 Add a `MediaryProvider` to your container. It provides:
 
 - every handler and behavior **class** the mediator has, with its constructor dependencies resolved by dishka;
-- in each request scope, a **`Mediator`** that resolves from that scope — also provided as `CommandSender`, `QuerySender`, and the mediator's own class.
+- in each request scope, a **`Mediator`** that resolves from that scope — also provided as `Sender`, `Publisher`, `CommandSender`, `QuerySender`, and the mediator's own class.
 
 ```{code-block} python
 :caption: shop/orders.py

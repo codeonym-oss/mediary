@@ -4,6 +4,8 @@ import pytest
 
 from .testing import RecordingMediator
 
+__all__ = ["mediator"]
+
 
 @pytest.fixture
 def mediator() -> RecordingMediator:

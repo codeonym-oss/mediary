@@ -8,13 +8,14 @@ from types import ModuleType
 from typing import Any, Concatenate, Self, TypeVar, overload
 
 from ._behaviors import Behavior, BehaviorBinding, StreamBehavior, bind_behavior, pipeline
+from ._deprecation import positional_only
 from ._errors import (
     DuplicateHandler,
     HandlerNotFound,
-    InvalidHandlerSignature,
+    InvalidHandler,
     MediaryError,
+    NotAMessage,
     NotANotification,
-    NotARequest,
     RuleViolation,
     ScanError,
 )
@@ -28,7 +29,7 @@ from ._markers import (
     kind_of,
     marker_of,
 )
-from ._publishing import PublishStrategy, Sequential
+from ._publishing import NotificationCall, PublishStrategy, Sequential
 from ._resolving import DefaultResolver, Resolver
 from ._scan import discover
 from ._streaming import Stream, layer, through
@@ -41,7 +42,7 @@ _SCANNED_KINDS = frozenset({"handler", "behavior"})
 
 @dataclass
 class _Staged:
-    """Handlers being added: one per request or stream type, any number per notification type."""
+    """Handlers being added: one per sent or streamed message type, any number per notification."""
 
     requests: dict[type, Binding] = field(default_factory=dict[type, Binding])
     notifications: list[Binding] = field(default_factory=list[Binding])
@@ -96,32 +97,36 @@ class Mediator:
         view._resolver = resolver
         return view
 
+    @positional_only("request_type", "handler")
     def register(
         self,
-        request_type: type[_Req],
+        message_type: type[_Req],
         handler: type[Handler[_Req, Any]]
         | type[SyncHandler[_Req, Any]]
         | type[StreamHandler[_Req, Any]]
         | Callable[Concatenate[_Req, ...], Any],
+        /,
     ) -> None:
-        """Register ``handler``, a handler class or function, for ``request_type``.
+        """Register ``handler``, a handler class or function, for ``message_type``.
 
-        ``request_type`` is a request or a stream request, which has exactly one handler, or a
-        notification, which has any number. A stream request's handler is an async generator.
-        A sync handler (a plain ``def``) runs on a worker thread. A class handler is resolved
-        for every call, unless it is decorated with ``@handler(lifetime="singleton")``.
-        Registering the same handler for the same type again changes nothing.
+        ``message_type`` is a request or a stream request, which has exactly one handler, or a
+        notification, which has any number; or a message of another kind, such as a command.
+        A stream request's handler is an async generator. A sync handler (a plain ``def``) runs
+        on a worker thread. A class handler is resolved for every call, unless it is decorated
+        with ``@handler(lifetime="singleton")``. Registering the same handler for the same type
+        again changes nothing.
 
         Raises:
-            NotARequest: ``request_type`` isn't decorated with ``@request`` or ``@notification``.
-            InvalidHandlerSignature: ``handler`` has the wrong shape (see ``@handler``), or is an
+            NotAMessage: ``message_type`` isn't decorated as a kind of message, such as with
+                ``@request`` or ``@notification``.
+            InvalidHandler: ``handler`` has the wrong shape (see ``@handler``), or is an
                 async generator for a message that isn't streamed, or isn't one for one that is.
-            RuleViolation: ``handler`` breaks a rule of the kind of ``request_type``.
-            DuplicateHandler: the request ``request_type`` already has another handler.
+            RuleViolation: ``handler`` breaks a rule of the kind of ``message_type``.
+            DuplicateHandler: ``message_type`` has exactly one handler, and already has another.
 
         """
         staged = _Staged()
-        self._stage(bind(handler, request_type), staged)
+        self._stage(bind(handler, message_type), staged)
         self._commit(staged)
 
     def use(
@@ -149,7 +154,8 @@ class Mediator:
                 mediator.use(RetryBehavior(retry_on=(ConnectionError,)), kinds={"request"})
 
         Raises:
-            InvalidBehaviorSignature: ``behavior`` has the wrong shape (see ``@behavior``).
+            InvalidBehavior: ``behavior`` has the wrong shape (see ``@behavior``), or ``kinds``
+                names a kind that isn't defined.
 
         """
         self._add_behaviors(bind_behavior(behavior, order=order, kinds=kinds))
@@ -157,7 +163,7 @@ class Mediator:
     def scan(self, *packages: str | ModuleType) -> None:
         """Import ``packages`` and their submodules; register every ``@handler`` and ``@behavior``.
 
-        Each handler serves the request named by ``@handler(...)`` or by the type hint of its
+        Each handler serves the message named by ``@handler(...)`` or by the type hint of its
         request parameter. Scanning is all or nothing: every problem found is reported
         together, and if there is any, nothing from this scan is registered. Scanning a
         package again registers nothing new.
@@ -189,10 +195,10 @@ class Mediator:
         target = binding.request_type
         kind = kind_of(target)
         if kind is None:
-            raise NotARequest(target)
+            raise NotAMessage(target)
         streamed = kind.dispatch == "stream"
         if binding.streams != streamed:
-            raise InvalidHandlerSignature(
+            raise InvalidHandler(
                 binding.source,
                 f"@{kind.name} handlers are async generators that `yield` their items"
                 if streamed
@@ -206,10 +212,11 @@ class Mediator:
                 kind.name,
                 f"it handles only @{handles} messages, but {_qualified_name(target)} is a "
                 f"@{kind.name}",
+                target,
             )
         reason = kind.check(HandlerInfo(target, binding.source, binding.returns))
         if reason is not None:
-            raise RuleViolation(binding.source, kind.name, reason)
+            raise RuleViolation(binding.source, kind.name, reason, target)
         if kind.dispatch == "publish":
             staged.notifications.append(binding)
             return
@@ -269,8 +276,13 @@ class Mediator:
         if not is_notification(notification_type):
             raise NotANotification(notification_type)
         subscribers = self._subscribers.get(notification_type, {}).values()
-        handlers = [partial(b.invoke, notification, self._resolver) for b in subscribers]
-        run = partial((strategy or self._strategy).publish, handlers)
+        calls = [
+            NotificationCall(
+                b.source, notification, partial(b.invoke, notification, self._resolver)
+            )
+            for b in subscribers
+        ]
+        run = partial((strategy or self._strategy).publish, calls)
         await self._through_pipeline(notification, run)
 
     @overload

@@ -33,7 +33,13 @@ from starlette.websockets import WebSocket
 from .._mediator import Mediator
 from .._resolving import Resolver
 
-__all__ = ["ConnectionResolver", "MediatorDep", "get_mediator", "setup_mediary"]
+__all__ = [
+    "ConnectionResolver",
+    "MediatorDep",
+    "ResolverFactory",
+    "get_mediator",
+    "setup_mediary",
+]
 
 _T = TypeVar("_T")
 
@@ -88,7 +94,7 @@ def get_mediator(connection: HTTPConnection) -> Mediator:
     """Return the mediator of the connection's app, resolving for this connection.
 
     It is the dependency behind ``MediatorDep``; use it with ``Depends`` to annotate the
-    parameter with another type, such as ``Annotated[QuerySender, Depends(get_mediator)]``.
+    parameter with another type, such as ``Annotated[Sender, Depends(get_mediator)]``.
 
     Raises:
         RuntimeError: ``setup_mediary`` wasn't called for the app.

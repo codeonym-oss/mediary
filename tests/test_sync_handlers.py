@@ -12,8 +12,8 @@ from conftest import MakePackage
 from mediary import (
     Concurrent,
     HandlerTimeout,
-    InvalidBehaviorSignature,
-    InvalidHandlerSignature,
+    InvalidBehavior,
+    InvalidHandler,
     Mediator,
     Next,
     Returns,
@@ -224,7 +224,7 @@ def test_a_sync_generator_is_not_a_stream_handler() -> None:
             yield 1
 
     for source in (count, CountHandler):
-        with pytest.raises(InvalidHandlerSignature, match="must be async generators"):
+        with pytest.raises(InvalidHandler, match="must be async generators"):
             Mediator().register(Count, source)
 
 
@@ -232,7 +232,7 @@ def test_a_sync_function_is_not_a_stream_handler() -> None:
     def count(request: Count) -> list[int]:
         return [1]
 
-    with pytest.raises(InvalidHandlerSignature, match="are async generators"):
+    with pytest.raises(InvalidHandler, match="are async generators"):
         Mediator().register(Count, count)
 
 
@@ -245,5 +245,5 @@ def test_behaviors_must_be_async() -> None:
             return "never"
 
     for behavior in (sync_behavior, SyncBehavior, SyncBehavior()):
-        with pytest.raises(InvalidBehaviorSignature, match="it is sync, but must be async"):
+        with pytest.raises(InvalidBehavior, match="it is sync, but must be async"):
             Mediator().use(behavior)  # pyright: ignore[reportArgumentType]
