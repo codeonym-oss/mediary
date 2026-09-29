@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/codeonym-oss/mediary/compare/v0.3.0...v0.3.1) (2026-09-29)
+
+
+### Documentation
+
+* link to versioned pages, which Read the Docs serves under /en/stable/ ([#61](https://github.com/codeonym-oss/mediary/issues/61)) ([ac81fb9](https://github.com/codeonym-oss/mediary/commit/ac81fb9fe4e4a9978b56c183e9a67279f9e67a8b))
+
 ## [0.3.0](https://github.com/codeonym-oss/mediary/compare/v0.2.1...v0.3.0) (2026-09-29)
 
 
