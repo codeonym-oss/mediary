@@ -1,14 +1,25 @@
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any
 
 import pytest
 from conftest import MakePackage
 
-from mediary import DuplicateHandler, Mediator, Next, RuleViolation, ScanError, handler
+from mediary import (
+    DuplicateHandler,
+    Mediator,
+    Next,
+    NextStream,
+    RuleViolation,
+    ScanError,
+    handler,
+)
 from mediary.cqrs import (
     Command,
     Event,
     Query,
+    StreamQuery,
+    StreamQueryHandler,
     command,
     command_behavior,
     command_handler,
@@ -17,7 +28,11 @@ from mediary.cqrs import (
     event_handler,
     query,
     query_handler,
+    stream_query,
+    stream_query_behavior,
+    stream_query_handler,
 )
+from mediary.testing import RecordingMediator
 
 
 @command
@@ -374,3 +389,95 @@ def test_kind_decorators_have_their_own_names_and_docs() -> None:
     assert getattr(command_behavior, "__name__", None) == "command_behavior"
     assert event_behavior.__doc__ is not None
     assert 'kinds={"event"}' in event_behavior.__doc__
+
+
+# Stream queries.
+
+
+@stream_query
+@dataclass(frozen=True)
+class ListNames(StreamQuery[str]):
+    count: int
+
+
+@stream_query_handler
+async def list_names(query: ListNames) -> AsyncIterator[str]:
+    for n in range(query.count):
+        yield f"user {n}"
+
+
+async def test_stream_queries_are_streamed_to_their_handler() -> None:
+    m = Mediator()
+    m.register(ListNames, list_names)
+    async with m.stream(ListNames(2)) as names:
+        assert [name async for name in names] == ["user 0", "user 1"]
+
+
+async def test_a_stream_query_handler_class_is_streamed() -> None:
+    @stream_query_handler
+    class ListNamesHandler(StreamQueryHandler[ListNames, str]):
+        async def handle(self, query: ListNames) -> AsyncIterator[str]:
+            yield "from a class"
+
+    m = Mediator()
+    m.register(ListNames, ListNamesHandler)
+    async with m.stream(ListNames(1)) as names:
+        assert [name async for name in names] == ["from a class"]
+
+
+async def test_stream_query_behaviors_wrap_only_stream_queries() -> None:
+    log: list[str] = []
+
+    @stream_query_behavior
+    async def upper(query: object, next: NextStream[str]) -> AsyncIterator[str]:
+        async for item in next():
+            yield item.upper()
+
+    async def by_kind(message: object, next: NextStream[str]) -> AsyncIterator[str]:
+        log.append(type(message).__name__)
+        async for item in next():
+            yield item
+
+    m = make_mediator()
+    m.register(ListNames, list_names)
+    m.use(upper)
+    m.use(by_kind, kinds={"stream_query"})
+    async with m.stream(ListNames(1)) as names:
+        assert [name async for name in names] == ["USER 0"]
+    await m.send(Rename(1, "ada"))
+    assert await m.send(GetName(1)) == "ada"
+    assert log == ["ListNames"]
+
+
+def test_a_stream_query_handler_rejects_other_kinds() -> None:
+    @stream_query_handler
+    async def misfiled(query: GetName) -> str:
+        return ""
+
+    with pytest.raises(RuleViolation, match="stream_query"):
+        Mediator().register(GetName, misfiled)
+
+
+def test_a_stream_query_and_a_query_are_different_kinds() -> None:
+    with pytest.raises(
+        TypeError, match="subclasses StreamQuery, so decorate it with @stream_query"
+    ):
+
+        @query
+        class Wrong(StreamQuery[int]):
+            pass
+
+    with pytest.raises(TypeError, match="subclasses Query, so decorate it with @query"):
+
+        @stream_query
+        class AlsoWrong(Query[int]):
+            pass
+
+
+async def test_a_stream_query_can_be_stubbed() -> None:
+    m = RecordingMediator()
+    m.register(ListNames, list_names)
+    m.stub(ListNames, ["ada", "grace"])
+    async with m.stream(ListNames(5)) as names:
+        assert [name async for name in names] == ["ada", "grace"]
+    assert m.streamed_of(ListNames) == [ListNames(5)]
