@@ -34,6 +34,9 @@ from mediary.cqrs import (
     Query,
     QueryHandler,
     QuerySender,
+    StreamQuery,
+    StreamQueryHandler,
+    StreamQuerySender,
     command,
     command_behavior,
     command_handler,
@@ -43,6 +46,9 @@ from mediary.cqrs import (
     query,
     query_behavior,
     query_handler,
+    stream_query,
+    stream_query_behavior,
+    stream_query_handler,
 )
 from mediary.testing import RecordingMediator
 
@@ -317,3 +323,46 @@ async def test_stream_is_typed_from_yields() -> None:
         async for name in names:
             assert_type(name, str)
     m.stub(ListNames, ["grace"])
+
+
+@stream_query
+@dataclass
+class ExportNames(StreamQuery[str]):
+    pass
+
+
+async def export_names(query: ExportNames) -> AsyncIterator[str]:
+    yield "ada"
+
+
+class ExportNamesHandler(StreamQueryHandler[ExportNames, str]):
+    async def handle(self, query: ExportNames) -> AsyncIterator[str]:
+        yield "ada"
+
+
+# A query is not a stream query.
+class QueryAsStream(StreamQueryHandler[CountUsers, int]):  # pyright: ignore[reportInvalidTypeForm]
+    async def handle(self, query: CountUsers) -> AsyncIterator[int]:
+        yield 1
+
+
+async def use_stream_queries(queries: StreamQuerySender) -> None:
+    async with queries.stream(ExportNames()) as names:
+        assert_type(names, Stream[str])
+        assert [name async for name in names] == ["ada"]
+
+
+async def stream_non_stream_queries(queries: StreamQuerySender) -> None:
+    # Never run: only the static errors are under test.
+    queries.stream(CountUsers())  # pyright: ignore[reportArgumentType]
+    queries.stream(ListNames())  # pyright: ignore[reportArgumentType]
+
+
+async def test_a_mediator_streams_stream_queries_typed_from_the_base() -> None:
+    m = Mediator()
+    m.register(ExportNames, export_names)
+    assert_type(m.stream(ExportNames()), Stream[str])
+    await use_stream_queries(m)
+    assert_type(stream_query(ExportNames), type[ExportNames])
+    assert_type(stream_query_handler(ExportNamesHandler), type[ExportNamesHandler])
+    assert_type(stream_query_behavior(order=1)(Passthrough), type[Passthrough])

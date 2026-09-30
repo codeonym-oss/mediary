@@ -2,13 +2,16 @@
 
 ``@command`` and ``@query`` are sent to exactly one handler; ``@event`` is published to any number.
 A query handler annotated to return None is rejected when it is registered or scanned.
+``@stream_query`` is a query whose one handler yields its results, for reads too big to return at
+once: it is streamed with ``Mediator.stream``.
 
-``@command_handler``, ``@query_handler`` and ``@event_handler`` are ``@handler`` for one kind:
-a handler they mark is rejected if its message is of another kind. ``@command_behavior``,
-``@query_behavior`` and ``@event_behavior`` are ``@behavior(kinds={"command"})`` and its
-counterparts. ``CommandHandler``, ``QueryHandler`` and ``EventHandler`` let a handler class
-declare what it handles. The ``Command``, ``Query`` and ``Event`` bases are optional; they type
-the narrow senders ``CommandSender``, ``QuerySender`` and ``EventPublisher``.
+``@command_handler``, ``@query_handler``, ``@stream_query_handler`` and ``@event_handler`` are
+``@handler`` for one kind: a handler they mark is rejected if its message is of another kind.
+``@command_behavior`` and its counterparts are ``@behavior(kinds={"command"})`` and so on.
+``CommandHandler``, ``QueryHandler``, ``StreamQueryHandler`` and ``EventHandler`` let a handler
+class declare what it handles. The ``Command``, ``Query``, ``StreamQuery`` and ``Event`` bases are
+optional; they type the narrow senders ``CommandSender``, ``QuerySender``, ``StreamQuerySender``
+and ``EventPublisher``.
 
 The pack is built only on the public ``mediary.kinds`` API. Give each piece of code the
 narrowest sender it needs, so that, for instance, a read-only view can't send a command.
@@ -33,8 +36,9 @@ Example:
 
 from typing import Any, Protocol, TypeAlias, TypeVar
 
-from ._handlers import Handler
-from ._markers import Returns
+from ._handlers import Handler, StreamHandler
+from ._markers import Returns, Yields
+from ._streaming import Stream
 from .kinds import (
     BehaviorDecorator,
     HandlerDecorator,
@@ -54,6 +58,9 @@ __all__ = [
     "Query",
     "QueryHandler",
     "QuerySender",
+    "StreamQuery",
+    "StreamQueryHandler",
+    "StreamQuerySender",
     "command",
     "command_behavior",
     "command_handler",
@@ -63,6 +70,9 @@ __all__ = [
     "query",
     "query_behavior",
     "query_handler",
+    "stream_query",
+    "stream_query_behavior",
+    "stream_query_handler",
 ]
 
 _R = TypeVar("_R")
@@ -79,6 +89,22 @@ class Command(Returns[_R_co]):
 
 class Query(Returns[_R_co]):
     """Base for queries: declares what the handler returns, and types ``QuerySender.send``."""
+
+    __slots__ = ()
+
+
+class StreamQuery(Yields[_R_co]):
+    """Base for stream queries: declares what the handler yields, and types ``Mediator.stream``.
+
+    Example:
+        .. code-block:: python
+
+            @stream_query
+            @dataclass
+            class ExportUsers(StreamQuery[User]):
+                since: date
+
+    """
 
     __slots__ = ()
 
@@ -108,10 +134,16 @@ def _returns_a_result(info: HandlerInfo) -> str | None:
 
 _COMMAND = define_kind("command", dispatch="send")
 _QUERY = define_kind("query", dispatch="send", rules=[_returns_a_result])
+_STREAM_QUERY = define_kind("stream_query", dispatch="stream")
 _EVENT = define_kind("event", dispatch="publish")
 
 
-_BASES: dict[type, str] = {Command: "command", Query: "query", Event: "event"}
+_BASES: dict[type, str] = {
+    Command: "command",
+    Query: "query",
+    StreamQuery: "stream_query",
+    Event: "event",
+}
 
 
 def _check_base(cls: type, own: type) -> None:
@@ -127,7 +159,7 @@ def command(cls: _C) -> _C:
     """Mark a class as a command: a request to change state, sent to exactly one handler.
 
     Raises:
-        TypeError: ``cls`` subclasses ``Query`` or ``Event``.
+        TypeError: ``cls`` subclasses ``Query``, ``StreamQuery`` or ``Event``.
 
     """
     _check_base(cls, Command)
@@ -140,18 +172,32 @@ def query(cls: _C) -> _C:
     Its handler must not be annotated to return None.
 
     Raises:
-        TypeError: ``cls`` subclasses ``Command`` or ``Event``.
+        TypeError: ``cls`` subclasses ``Command``, ``StreamQuery`` or ``Event``.
 
     """
     _check_base(cls, Query)
     return _QUERY(cls)
 
 
+def stream_query(cls: _C) -> _C:
+    """Mark a class as a stream query: a read whose one handler yields its results.
+
+    It is streamed with ``Mediator.stream``, and its handler is an async generator, as for a
+    ``@stream_request``.
+
+    Raises:
+        TypeError: ``cls`` subclasses ``Command``, ``Query`` or ``Event``.
+
+    """
+    _check_base(cls, StreamQuery)
+    return _STREAM_QUERY(cls)
+
+
 def event(cls: _C) -> _C:
     """Mark a class as an event: something that happened, published to all of its handlers.
 
     Raises:
-        TypeError: ``cls`` subclasses ``Command`` or ``Query``.
+        TypeError: ``cls`` subclasses ``Command``, ``Query`` or ``StreamQuery``.
 
     """
     _check_base(cls, Event)
@@ -160,6 +206,7 @@ def event(cls: _C) -> _C:
 
 _Command = TypeVar("_Command", bound=Command[Any])
 _Query = TypeVar("_Query", bound=Query[Any])
+_StreamQuery = TypeVar("_StreamQuery", bound=StreamQuery[Any])
 _Event = TypeVar("_Event")
 
 CommandHandler: TypeAlias = Handler[_Command, _R]
@@ -177,6 +224,9 @@ Example:
 QueryHandler: TypeAlias = Handler[_Query, _R]
 """The shape of a class handler of a query: ``Handler`` with the message bound to ``Query``."""
 
+StreamQueryHandler: TypeAlias = StreamHandler[_StreamQuery, _R]
+"""The shape of a class handler of a stream query: ``StreamHandler`` bound to ``StreamQuery``."""
+
 EventHandler: TypeAlias = Handler[_Event, None]
 """The shape of a class handler of an event: ``Handler`` of the event, returning None."""
 
@@ -189,34 +239,51 @@ def _named(decorator: _D, name: str, doc: str) -> _D:
     return decorator
 
 
-_HANDLER_DOC = """Mark a {kind} handler: like ``@handler``, for handlers of {kind}s only.
+def _plural(label: str) -> str:
+    return f"{label[:-1]}ies" if label.endswith("y") else f"{label}s"
+
+
+def _handler_doc(kind: str) -> str:
+    label = kind.replace("_", " ")
+    article, labels = ("an" if label[0] in "aeiou" else "a"), _plural(label)
+    return f"""Mark {article} {label} handler: like ``@handler``, for handlers of {labels} only.
 
 It takes the same arguments as ``@handler``. Registering or scanning the handler for a message
-that isn't {article} {kind} raises ``RuleViolation``, which names the handler and the message.
+that isn't {article} {label} raises ``RuleViolation``, which names the handler and the message.
 """
 
-_BEHAVIOR_DOC = """Mark a behavior that wraps only {kind}s: ``@behavior(kinds={{"{kind}"}})``.
+
+def _behavior_doc(kind: str) -> str:
+    label = kind.replace("_", " ")
+    return f"""Mark a behavior that wraps only {_plural(label)}: ``@behavior(kinds={{"{kind}"}})``.
 
 It takes the same ``order`` as ``@behavior``.
 """
 
+
 command_handler: HandlerDecorator = _named(
-    handler_for(_COMMAND), "command_handler", _HANDLER_DOC.format(kind="command", article="a")
+    handler_for(_COMMAND), "command_handler", _handler_doc("command")
 )
 query_handler: HandlerDecorator = _named(
-    handler_for(_QUERY), "query_handler", _HANDLER_DOC.format(kind="query", article="a")
+    handler_for(_QUERY), "query_handler", _handler_doc("query")
+)
+stream_query_handler: HandlerDecorator = _named(
+    handler_for(_STREAM_QUERY), "stream_query_handler", _handler_doc("stream_query")
 )
 event_handler: HandlerDecorator = _named(
-    handler_for(_EVENT), "event_handler", _HANDLER_DOC.format(kind="event", article="an")
+    handler_for(_EVENT), "event_handler", _handler_doc("event")
 )
 command_behavior: BehaviorDecorator = _named(
-    behavior_for(_COMMAND), "command_behavior", _BEHAVIOR_DOC.format(kind="command")
+    behavior_for(_COMMAND), "command_behavior", _behavior_doc("command")
 )
 query_behavior: BehaviorDecorator = _named(
-    behavior_for(_QUERY), "query_behavior", _BEHAVIOR_DOC.format(kind="query")
+    behavior_for(_QUERY), "query_behavior", _behavior_doc("query")
+)
+stream_query_behavior: BehaviorDecorator = _named(
+    behavior_for(_STREAM_QUERY), "stream_query_behavior", _behavior_doc("stream_query")
 )
 event_behavior: BehaviorDecorator = _named(
-    behavior_for(_EVENT), "event_behavior", _BEHAVIOR_DOC.format(kind="event")
+    behavior_for(_EVENT), "event_behavior", _behavior_doc("event")
 )
 
 
@@ -233,6 +300,17 @@ class QuerySender(Protocol):
 
     async def send(self, query: Query[_R], /) -> _R:
         """Send ``query`` to its handler and return the result."""
+        ...
+
+
+class StreamQuerySender(Protocol):
+    """Something that streams stream queries, such as a ``Mediator``.
+
+    It is apart from ``QuerySender``, so that implementing one doesn't require the other.
+    """
+
+    def stream(self, query: StreamQuery[_R], /) -> Stream[_R]:
+        """Stream the items ``query``'s handler yields."""
         ...
 
 

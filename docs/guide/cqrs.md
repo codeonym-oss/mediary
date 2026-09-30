@@ -6,6 +6,7 @@ Command–query responsibility segregation splits what changes state from what r
 |---|---|---|---|---|---|
 | **Command** — change state | `@command` | `Command[R]` | `@command_handler` | exactly one | `send` |
 | **Query** — read state | `@query` | `Query[R]` | `@query_handler` | exactly one, must return a result | `send` |
+| **Stream query** — read state, item by item | `@stream_query` | `StreamQuery[T]` | `@stream_query_handler` | exactly one, an async generator | `stream` |
 | **Event** — announce what happened | `@event` | `Event` | `@event_handler` | any number | `publish` |
 
 It ships with mediary; nothing extra to install.
@@ -84,7 +85,7 @@ Commands and queries are requests, and events notifications, with names of their
 
 ## Handlers of each kind
 
-`@command_handler`, `@query_handler` and `@event_handler` work like `@handler` — on functions and classes, sync or async, bare or with a request type or `lifetime` — and check that the message is of their kind. A `@command_handler` bound to a query is rejected when it is registered or scanned, so the mistake shows at startup:
+`@command_handler`, `@query_handler`, `@stream_query_handler` and `@event_handler` work like `@handler` — on functions and classes, sync or async, bare or with a request type or `lifetime` — and check that the message is of their kind. A `@command_handler` bound to a query is rejected when it is registered or scanned, so the mistake shows at startup:
 
 ```python
 from mediary import RuleViolation
@@ -105,7 +106,7 @@ assert "handles only @command messages" in reason
 
 They are shorthand, not a requirement: a plain `@handler` serves commands, queries and events just as well.
 
-A handler class can also declare what it handles, for type checkers: `CommandHandler[C, R]`, `QueryHandler[Q, R]` and `EventHandler[E]` are the `Handler` protocol with the message bound to a `Command`, a `Query` or an event. `CommandHandler[GetUserName, str]` is a type error, since a query isn't a command:
+A handler class can also declare what it handles, for type checkers: `CommandHandler[C, R]`, `QueryHandler[Q, R]` and `EventHandler[E]` are the `Handler` protocol with the message bound to a `Command`, a `Query` or an event, and `StreamQueryHandler[Q, T]` is the `StreamHandler` protocol bound to a `StreamQuery`. `CommandHandler[GetUserName, str]` is a type error, since a query isn't a command:
 
 ```python
 from mediary.cqrs import QueryHandler, query_handler
@@ -141,9 +142,41 @@ except RuleViolation as error:
 assert "must return" in reason
 ```
 
+## Stream queries
+
+A read too big to return at once — an export, a feed — is a **stream query**: its handler is an async generator, and it is [streamed](streams.md) item by item with `mediator.stream`. `StreamQuery[T]` declares the items, so the stream is typed:
+
+```python
+from collections.abc import AsyncIterator
+from dataclasses import dataclass
+
+from mediary.cqrs import StreamQuery, stream_query, stream_query_handler
+from users.model import names
+
+
+@stream_query
+@dataclass
+class ExportUserNames(StreamQuery[str]):
+    pass
+
+
+@stream_query_handler
+async def export_user_names(query: ExportUserNames) -> AsyncIterator[str]:
+    for user_id in sorted(names):
+        yield names[user_id]  # e.g. rows from a database cursor
+
+
+mediator.register(ExportUserNames, export_user_names)
+
+async with mediator.stream(ExportUserNames()) as exported:  # a Stream[str]
+    assert [name async for name in exported] == ["Ada"]
+```
+
+Everything about streams applies: closing early, [stream behaviors](streams.md), and `RecordingMediator.stub` with the items to yield. A stream query is a kind of its own, not a query: `@query` on a `StreamQuery` subclass raises `TypeError`, and behaviors target it with `@stream_query_behavior` or `kinds={"stream_query"}`.
+
 ## Narrow senders
 
-Give each piece of code the narrowest sender it needs. `QuerySender` can only send queries, `CommandSender` only commands, and `EventPublisher` only publishes events; a `Mediator` is all three:
+Give each piece of code the narrowest sender it needs. `QuerySender` can only send queries, `CommandSender` only commands, `StreamQuerySender` only streams stream queries, and `EventPublisher` only publishes events; a `Mediator` is each of them:
 
 ```python
 from mediary.cqrs import QuerySender
@@ -176,7 +209,7 @@ Senders are `Protocol`s, so a fake is a one-method class in tests. The [dishka i
 
 ## Behaviors per kind
 
-Target [behaviors](behaviors.md) at one side: wrap commands in a [transaction](../recipes/transactions.md), [cache](../recipes/caching.md) queries, retry only queries. `@command_behavior`, `@query_behavior` and `@event_behavior` are `@behavior(kinds={"command"})` and its counterparts, with the same `order`:
+Target [behaviors](behaviors.md) at one side: wrap commands in a [transaction](../recipes/transactions.md), [cache](../recipes/caching.md) queries, retry only queries. `@command_behavior`, `@query_behavior`, `@stream_query_behavior` and `@event_behavior` are `@behavior(kinds={"command"})` and its counterparts, with the same `order`:
 
 ```python
 from typing import Any

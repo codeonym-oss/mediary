@@ -9,7 +9,7 @@ pytest.importorskip("dishka")
 from dishka import Provider, Scope, make_async_container, make_container
 
 from mediary import Mediator, Next, Publisher, Returns, Sender, handler, notification, request
-from mediary.cqrs import CommandSender, EventPublisher, QuerySender
+from mediary.cqrs import CommandSender, EventPublisher, QuerySender, StreamQuerySender
 from mediary.ext.dishka import DishkaResolver, MediaryProvider
 from mediary.testing import RecordingMediator
 
@@ -103,6 +103,7 @@ async def test_a_scope_provides_the_mediator_as_each_of_its_types() -> None:
             Publisher,
             CommandSender,
             QuerySender,
+            StreamQuerySender,
             EventPublisher,
         ):
             assert await scope.get(other) is scoped
