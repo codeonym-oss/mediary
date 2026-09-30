@@ -22,7 +22,7 @@ Example:
 
 from ._behaviors import BehaviorDecorator, behavior_for
 from ._handlers import HandlerDecorator, handler_for
-from ._markers import Dispatch, HandlerInfo, HandlerRule, Kind, define_kind, kind_of
+from ._markers import Dispatch, HandlerInfo, HandlerRule, Kind, define_kind, kind_named, kind_of
 
 __all__ = [
     "BehaviorDecorator",
@@ -34,5 +34,6 @@ __all__ = [
     "behavior_for",
     "define_kind",
     "handler_for",
+    "kind_named",
     "kind_of",
 ]

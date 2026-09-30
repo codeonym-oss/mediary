@@ -18,8 +18,8 @@ from ._errors import (
     ScanError,
 )
 from ._handlers import Handler, StreamHandler, SyncHandler, handler
-from ._markers import Returns, Yields, notification, request, stream_request
-from ._mediator import Mediator
+from ._markers import Lifetime, Returns, Yields, notification, request, stream_request
+from ._mediator import BehaviorRegistration, HandlerRegistration, Mediator, Registrations
 from ._publishing import Concurrent, NotificationCall, PublishStrategy, Sequential
 from ._resolving import Resolver
 from ._retryable import TransientError, retryable
@@ -55,13 +55,16 @@ else:
 
 __all__ = [
     "Behavior",
+    "BehaviorRegistration",
     "Concurrent",
     "DuplicateHandler",
     "Handler",
     "HandlerNotFound",
+    "HandlerRegistration",
     "HandlerTimeout",
     "InvalidBehavior",
     "InvalidHandler",
+    "Lifetime",
     "MediaryError",
     "Mediator",
     "Next",
@@ -71,6 +74,7 @@ __all__ = [
     "NotificationCall",
     "PublishStrategy",
     "Publisher",
+    "Registrations",
     "Resolver",
     "Returns",
     "RuleViolation",

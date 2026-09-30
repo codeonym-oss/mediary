@@ -10,6 +10,8 @@ _C = TypeVar("_C", bound=type)
 _T = TypeVar("_T")
 
 Lifetime = Literal["transient", "singleton"]
+"""How long a class handler's instance lives: resolved for every call, or once per mediator."""
+
 Dispatch = Literal["send", "publish", "stream"]
 
 _MARKER_ATTR: Final = "__mediary_marker__"
@@ -172,7 +174,14 @@ def define_kind(name: str, *, dispatch: Dispatch, rules: Iterable[HandlerRule] =
 
 
 def kind_named(name: str) -> Kind | None:
-    """Return the kind defined as ``name``, or None."""
+    """Return the kind defined as ``name``, such as ``"query"``, or None if there is none.
+
+    Example:
+        .. code-block:: python
+
+            assert kind_named("request") is kind_of(PlaceOrder)
+
+    """
     return _KINDS.get(name)
 
 

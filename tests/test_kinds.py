@@ -15,7 +15,7 @@ from mediary import (
     request,
 )
 from mediary.behaviors import LoggingBehavior
-from mediary.kinds import HandlerInfo, define_kind, kind_of
+from mediary.kinds import HandlerInfo, define_kind, kind_named, kind_of
 
 seen: list[HandlerInfo] = []
 
@@ -50,6 +50,17 @@ def test_a_kind_decorates_a_class_as_itself() -> None:
     assert (tally.name, tally.dispatch) == ("tally", "send")
     assert kind_of(DiskFull) is alert
     assert kind_of(int) is None
+
+
+def test_a_kind_is_looked_up_by_name() -> None:
+    assert kind_named("tally") is tally
+
+    @request
+    class Ping:
+        pass
+
+    assert kind_named("request") is kind_of(Ping)
+    assert kind_named("no such kind") is None
 
 
 def test_a_kind_is_not_inherited() -> None:
