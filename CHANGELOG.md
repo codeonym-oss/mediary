@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.4.0](https://github.com/codeonym-oss/mediary/compare/v0.3.1...v0.4.0) (2026-09-30)
+
+
+### Features
+
+* add an Event base and an EventPublisher to mediary.cqrs ([#55](https://github.com/codeonym-oss/mediary/issues/55)) ([#66](https://github.com/codeonym-oss/mediary/issues/66)) ([fe55e6d](https://github.com/codeonym-oss/mediary/commit/fe55e6db3bbc2ad7a8e465c9b657af022579f31a))
+* add stream queries to mediary.cqrs ([#56](https://github.com/codeonym-oss/mediary/issues/56)) ([#67](https://github.com/codeonym-oss/mediary/issues/67)) ([606b204](https://github.com/codeonym-oss/mediary/commit/606b2043713424c7d7b57d75affe30e1782ce284))
+* bound how many handlers Concurrent runs at once ([#63](https://github.com/codeonym-oss/mediary/issues/63)) ([72f6d2f](https://github.com/codeonym-oss/mediary/commit/72f6d2faf95294f9b9aff1eaf55860ae8e970b9c)), closes [#57](https://github.com/codeonym-oss/mediary/issues/57)
+* introspect registrations and kinds, and export Lifetime ([#65](https://github.com/codeonym-oss/mediary/issues/65)) ([1718215](https://github.com/codeonym-oss/mediary/commit/1718215dba742868f241bb933d840309806896bf)), closes [#59](https://github.com/codeonym-oss/mediary/issues/59)
+
 ## [0.3.1](https://github.com/codeonym-oss/mediary/compare/v0.3.0...v0.3.1) (2026-09-29)
 
 
