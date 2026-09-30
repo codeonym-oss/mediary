@@ -26,7 +26,7 @@ from dishka import AnyOf, AsyncContainer, BaseScope, Container, Provider, Scope
 from .._markers import Lifetime
 from .._mediator import Mediator
 from .._senders import Publisher, Sender
-from ..cqrs import CommandSender, QuerySender
+from ..cqrs import CommandSender, EventPublisher, QuerySender
 
 __all__ = ["DishkaResolver", "MediaryProvider"]
 
@@ -54,7 +54,8 @@ class MediaryProvider(Provider):
 
     In ``scope`` (by default ``Scope.REQUEST``), the container provides a view of ``mediator``
     (see ``Mediator.with_resolver``) that resolves from that scope's container, as ``Mediator``,
-    ``Sender``, ``Publisher``, ``CommandSender``, ``QuerySender`` and the mediator's own class.
+    ``Sender``, ``Publisher``, ``CommandSender``, ``QuerySender``, ``EventPublisher`` and the
+    mediator's own class.
 
     Handler and behavior classes are provided with their constructor dependencies resolved by
     dishka: transient ones in ``scope`` and uncached, so each send gets a new instance, and
@@ -76,7 +77,15 @@ class MediaryProvider(Provider):
             return mediator.with_resolver(DishkaResolver(container))
 
         provides = dict.fromkeys(
-            [Mediator, type(mediator), Sender, Publisher, CommandSender, QuerySender]
+            [
+                Mediator,
+                type(mediator),
+                Sender,
+                Publisher,
+                CommandSender,
+                QuerySender,
+                EventPublisher,
+            ]
         )
         self.provide(scoped, scope=scope, provides=AnyOf[tuple(provides)])
 

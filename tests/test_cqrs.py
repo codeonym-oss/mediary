@@ -7,6 +7,7 @@ from conftest import MakePackage
 from mediary import DuplicateHandler, Mediator, Next, RuleViolation, ScanError, handler
 from mediary.cqrs import (
     Command,
+    Event,
     Query,
     command,
     command_behavior,
@@ -133,6 +134,41 @@ def test_the_base_must_match_the_decorator() -> None:
         @query
         class AlsoWrong(Command[int]):
             pass
+
+
+@pytest.mark.parametrize(("base", "name"), [(Command[None], "command"), (Query[int], "query")])
+def test_an_event_cannot_subclass_a_command_or_query(base: type[object], name: str) -> None:
+    with pytest.raises(TypeError, match=f"subclasses {name.title()}, so decorate it with @{name}"):
+
+        @event
+        class Wrong(base):
+            pass
+
+
+@pytest.mark.parametrize("decorator", [command, query])
+def test_a_command_or_query_cannot_subclass_event(decorator: Any) -> None:
+    with pytest.raises(TypeError, match="subclasses Event, so decorate it with @event"):
+
+        @decorator
+        class Wrong(Event):
+            pass
+
+
+async def test_events_with_the_base_are_published() -> None:
+    received: list[object] = []
+
+    @event
+    @dataclass(frozen=True)
+    class Shipped(Event):
+        order_id: int
+
+    async def on_shipped(event: Shipped) -> None:
+        received.append(event)
+
+    m = Mediator()
+    m.register(Shipped, on_shipped)
+    await m.publish(Shipped(7))
+    assert received == [Shipped(7)]
 
 
 def test_scan_reports_every_rule_violation(make_package: MakePackage) -> None:

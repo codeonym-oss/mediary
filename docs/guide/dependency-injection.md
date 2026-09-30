@@ -165,4 +165,4 @@ The view is cheap to make — make one per unit of work. It shares its handlers,
 
 ## Handlers that send
 
-A handler can send other requests: depend on the mediator, or on the narrower `Sender` (`send` and `stream`) or `Publisher` (`publish`), which a `Mediator` is and a test fake can be. Register the mediator with your container (or resolve it in your resolver) so handlers get the one — or the per-request view — that is running them. The [dishka integration](../integrations/dishka.md) does this for you, and provides the mediator as `Mediator`, `Sender`, `Publisher`, `CommandSender` and `QuerySender`.
+A handler can send other requests: depend on the mediator, or on the narrower `Sender` (`send` and `stream`) or `Publisher` (`publish`), which a `Mediator` is and a test fake can be. Register the mediator with your container (or resolve it in your resolver) so handlers get the one — or the per-request view — that is running them. The [dishka integration](../integrations/dishka.md) does this for you, and provides the mediator as `Mediator`, `Sender`, `Publisher`, `CommandSender`, `QuerySender` and `EventPublisher`.

@@ -28,7 +28,9 @@ from mediary.cqrs import (
     Command,
     CommandHandler,
     CommandSender,
+    Event,
     EventHandler,
+    EventPublisher,
     Query,
     QueryHandler,
     QuerySender,
@@ -189,6 +191,28 @@ async def test_a_mediator_is_both_senders_and_each_sends_only_its_kind() -> None
 @dataclass
 class Renamed:
     name: str
+
+
+@event
+@dataclass
+class NameChanged(Event):
+    name: str
+
+
+async def use_publisher(events: EventPublisher) -> None:
+    await events.publish(NameChanged("ada"))
+
+
+async def publish_non_events(events: EventPublisher) -> None:
+    # Never run: publishing a request raises at runtime; only the static errors are under test.
+    await events.publish(Rename("ada"))  # pyright: ignore[reportArgumentType]
+    await events.publish(CountUsers())  # pyright: ignore[reportArgumentType]
+    await events.publish(Renamed("ada"))  # pyright: ignore[reportArgumentType]
+
+
+async def test_a_mediator_is_an_event_publisher_that_publishes_only_events() -> None:
+    await use_publisher(Mediator())
+    assert_type(event(NameChanged), type[NameChanged])
 
 
 class RenameHandler(CommandHandler[Rename, None]):
