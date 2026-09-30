@@ -40,6 +40,47 @@ _R = TypeVar("_R")
 _SCANNED_KINDS = frozenset({"handler", "behavior"})
 
 
+@dataclass(frozen=True, slots=True)
+class HandlerRegistration:
+    """A handler registered with a mediator, and the message type it handles.
+
+    ``handler`` is the class or function as it was registered. ``lifetime`` is how long the
+    instance of a class handler lives; a function handler is always ``"transient"``.
+    """
+
+    message_type: type
+    handler: Any
+    lifetime: Lifetime = "transient"
+
+
+@dataclass(frozen=True, slots=True)
+class BehaviorRegistration:
+    """A behavior added to a mediator, with its place in the pipeline and what it wraps.
+
+    ``behavior`` is the class, instance or function as it was added. ``order`` and ``kinds`` are
+    its place in the pipeline and the kinds of message it wraps (None for all), from ``use`` or
+    ``@behavior(...)``. ``streams`` is whether it wraps stream requests, which only stream
+    behaviors do: a behavior with both shapes, such as ``LoggingBehavior``, is added twice.
+    """
+
+    behavior: Any
+    order: int = 0
+    kinds: frozenset[str] | None = None
+    streams: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class Registrations:
+    """What a mediator has registered, as ``Mediator.registrations()`` returns it.
+
+    ``handlers`` are ordered by the qualified name of their message type, then as ``publish``
+    runs them. ``behaviors`` are in pipeline order, outermost first.
+    """
+
+    handlers: tuple[HandlerRegistration, ...] = ()
+    behaviors: tuple[BehaviorRegistration, ...] = ()
+
+
 @dataclass
 class _Staged:
     """Handlers being added: one per sent or streamed message type, any number per notification."""
@@ -189,6 +230,31 @@ class Mediator:
             raise ScanError(problems)
         self._commit(staged)
         self._add_behaviors(behaviors)
+
+    def registrations(self) -> Registrations:
+        """Return what this mediator has registered, with ``register``, ``use`` and ``scan``.
+
+        It is a snapshot: later registrations don't change it. Use it for diagnostics, admin
+        endpoints, or integrations that must know every handler class, like ``mediary.ext.dishka``.
+
+        Example:
+            .. code-block:: python
+
+                for registration in mediator.registrations().handlers:
+                    print(registration.message_type.__name__, registration.handler.__name__)
+
+        """
+        bindings = [*self._bindings.values()]
+        for subscribers in self._subscribers.values():
+            bindings.extend(subscribers.values())
+        bindings.sort(key=lambda b: _qualified_name(b.request_type))  # stable: keeps publish order
+        behaviors = sorted(self._behaviors.values(), key=lambda b: (b.order, b.name))
+        return Registrations(
+            tuple(
+                HandlerRegistration(b.request_type, b.source, _lifetime(b.source)) for b in bindings
+            ),
+            tuple(BehaviorRegistration(b.source, b.order, b.kinds, b.streams) for b in behaviors),
+        )
 
     def _stage(self, binding: Binding, staged: _Staged) -> None:
         """Add ``binding`` to ``staged``, or raise if it can't be registered."""
@@ -357,20 +423,6 @@ def _qualified_name(obj: object) -> str:
     return f"{getattr(obj, '__module__', '')}.{getattr(obj, '__qualname__', '')}"
 
 
-def registered_classes(mediator: Mediator) -> list[tuple[type, Lifetime]]:
-    """Return the handler and behavior classes ``mediator`` resolves, with their lifetimes.
-
-    Function handlers and behavior instances aren't resolved, so they aren't included.
-    """
-    # Reads the registrations of a mediator it doesn't own, hence the ignores.
-    handlers = [*mediator._bindings.values()]  # pyright: ignore[reportPrivateUsage]
-    for subscribers in mediator._subscribers.values():  # pyright: ignore[reportPrivateUsage]
-        handlers.extend(subscribers.values())
-    sources = [b.source for b in handlers]
-    sources += [b.source for b in mediator._behaviors.values()]  # pyright: ignore[reportPrivateUsage]
-    classes: dict[type, Lifetime] = {}
-    for source in sources:
-        if isinstance(source, type):
-            marker = marker_of(source)
-            classes.setdefault(source, marker.lifetime if marker is not None else "transient")
-    return list(classes.items())
+def _lifetime(source: object) -> Lifetime:
+    marker = marker_of(source) if isinstance(source, type) else None
+    return marker.lifetime if marker is not None else "transient"

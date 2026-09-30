@@ -23,7 +23,8 @@ from typing import Any, TypeVar
 
 from dishka import AnyOf, AsyncContainer, BaseScope, Container, Provider, Scope
 
-from .._mediator import Mediator, registered_classes
+from .._markers import Lifetime
+from .._mediator import Mediator
 from .._senders import Publisher, Sender
 from ..cqrs import CommandSender, QuerySender
 
@@ -65,7 +66,7 @@ class MediaryProvider(Provider):
     def __init__(self, mediator: Mediator, *, scope: BaseScope = Scope.REQUEST) -> None:
         """Provide the classes of ``mediator``, and views of it in ``scope``."""
         super().__init__()
-        for cls, lifetime in registered_classes(mediator):
+        for cls, lifetime in _classes(mediator).items():
             if lifetime == "singleton":
                 self.provide(cls, scope=Scope.APP)
             else:
@@ -78,3 +79,18 @@ class MediaryProvider(Provider):
             [Mediator, type(mediator), Sender, Publisher, CommandSender, QuerySender]
         )
         self.provide(scoped, scope=scope, provides=AnyOf[tuple(provides)])
+
+
+def _classes(mediator: Mediator) -> dict[type, Lifetime]:
+    """Return the handler and behavior classes ``mediator`` resolves, with their lifetimes.
+
+    Function handlers and behavior instances aren't resolved, so they aren't included.
+    """
+    registrations = mediator.registrations()
+    classes: dict[type, Lifetime] = {
+        h.handler: h.lifetime for h in registrations.handlers if isinstance(h.handler, type)
+    }
+    for b in registrations.behaviors:
+        if isinstance(b.behavior, type):
+            classes.setdefault(b.behavior, "transient")
+    return classes

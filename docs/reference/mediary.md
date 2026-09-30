@@ -24,6 +24,20 @@ The narrow views of a mediator that code can depend on instead:
 .. autoclass:: mediary.Publisher
 ```
 
+What a mediator has registered, from `Mediator.registrations()`:
+
+```{eval-rst}
+.. autoclass:: mediary.Registrations
+```
+
+```{eval-rst}
+.. autoclass:: mediary.HandlerRegistration
+```
+
+```{eval-rst}
+.. autoclass:: mediary.BehaviorRegistration
+```
+
 ## Messages
 
 Decorators and bases that declare messages and what they return.
@@ -64,6 +78,13 @@ Decorators and bases that declare messages and what they return.
 
 ```{eval-rst}
 .. autoclass:: mediary.StreamHandler
+```
+
+```{py:data} mediary.Lifetime
+
+How long a class handler's instance lives, as `@handler(lifetime=...)` takes it: `"transient"`, resolved for every call, or `"singleton"`, resolved once per mediator.
+
+An alias of `Literal["transient", "singleton"]`.
 ```
 
 ## Behaviors
