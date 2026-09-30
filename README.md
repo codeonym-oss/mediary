@@ -219,7 +219,7 @@ await mediator.publish(OrderPlaced(42), strategy=Concurrent())  # all at once
 assert emails == ["order 42 confirmed"] * 2
 ```
 
-`Concurrent` runs every handler even when some fail, then raises their errors together in an `ExceptionGroup`. Pass `Mediator(publish_strategy=...)` to change the default, or write your own strategy.
+`Concurrent` runs every handler even when some fail, then raises their errors together in an `ExceptionGroup`. `Concurrent(limit=5)` runs at most 5 at a time, to spare a connection pool, say. Pass `Mediator(publish_strategy=...)` to change the default, or write your own strategy.
 
 ## Streams
 

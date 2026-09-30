@@ -83,22 +83,31 @@ async def within(seconds: float, work: Callable[[], Awaitable[_T]]) -> _T:
     raise Expired  # the block only ends without returning when the time ran out
 
 
-async def run_all(jobs: Sequence[Callable[[], Awaitable[object]]]) -> list[Exception | None]:
-    """Run ``jobs`` concurrently until all of them finish; return each one's error, or None."""
+async def run_all(
+    jobs: Sequence[Callable[[], Awaitable[object]]], limit: int | None = None
+) -> list[Exception | None]:
+    """Run ``jobs`` concurrently until all of them finish; return each one's error, or None.
+
+    At most ``limit`` run at once (all of them when None): that many tasks each take the next
+    job, in order, until none is left.
+    """
     errors: list[Exception | None] = [None] * len(jobs)
+    pending = iter(range(len(jobs)))
 
-    async def run(index: int) -> None:
-        try:
-            await jobs[index]()
-        except Exception as exc:
-            errors[index] = exc
+    async def work() -> None:
+        for index in pending:  # shared, so each job runs once, on whichever task is free
+            try:
+                await jobs[index]()
+            except Exception as exc:
+                errors[index] = exc
 
+    workers = len(jobs) if limit is None else min(limit, len(jobs))
     if _on_asyncio():
         async with asyncio.TaskGroup() as group:
-            for index in range(len(jobs)):
-                group.create_task(run(index))
+            for _ in range(workers):
+                group.create_task(work())
     else:
         async with _anyio().create_task_group() as group:
-            for index in range(len(jobs)):
-                group.start_soon(run, index)
+            for _ in range(workers):
+                group.start_soon(work)
     return errors

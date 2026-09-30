@@ -4,28 +4,29 @@ What mediary adds to a call, measured against doing the same work without it. Fo
 
 ## Results
 
-Measured on mediary 0.2.1 (with the changes up to 0.3.0), CPython 3.11.13, Linux 7.0, AMD Ryzen 5 3500U (a 2019 laptop CPU), on asyncio. Each time is per operation, the best of 7 runs.
+Measured on mediary 0.3.1 (with the changes up to 0.4.0), CPython 3.11.13, Linux 7.0, AMD Ryzen 5 3500U (a 2019 laptop CPU), on asyncio. Each time is per operation, the best of 7 runs.
 
 | Case | mediary | Baseline | Baseline time | Overhead |
 |---|--:|---|--:|--:|
-| send, 0 behaviors | 2.81 µs | handler called directly | 140 ns | +2.67 µs |
-| send, 1 behavior | 4.33 µs | handler called directly | 140 ns | +4.19 µs |
-| send, 5 behaviors | 9.68 µs | handler called directly | 140 ns | +9.54 µs |
-| send, 10 behaviors | 16.44 µs | handler called directly | 140 ns | +16.30 µs |
-| publish, 1 handler, sequential | 5.76 µs | awaited in turn | 263 ns | +5.50 µs |
-| publish, 1 handler, concurrent | 37.11 µs | tasks in a TaskGroup | 25.51 µs | +11.60 µs |
-| publish, 5 handlers, sequential | 14.49 µs | awaited in turn | 762 ns | +13.72 µs |
-| publish, 5 handlers, concurrent | 66.25 µs | tasks in a TaskGroup | 41.72 µs | +24.53 µs |
-| publish, 20 handlers, sequential | 44.82 µs | awaited in turn | 2.40 µs | +42.41 µs |
-| publish, 20 handlers, concurrent | 171.70 µs | tasks in a TaskGroup | 100.96 µs | +70.74 µs |
-| stream of 1000 items | 362.71 µs | generator iterated directly | 92.59 µs | +270.11 µs |
-| scan of 300 handlers, first | 30.09 ms | importing its modules | 20.94 ms | +9.15 ms |
-| scan of 300 handlers, already imported | 8.26 ms | | | |
+| send, 0 behaviors | 2.73 µs | handler called directly | 140 ns | +2.59 µs |
+| send, 1 behavior | 4.18 µs | handler called directly | 140 ns | +4.04 µs |
+| send, 5 behaviors | 9.58 µs | handler called directly | 140 ns | +9.44 µs |
+| send, 10 behaviors | 17.18 µs | handler called directly | 140 ns | +17.04 µs |
+| publish, 1 handler, sequential | 5.65 µs | awaited in turn | 281 ns | +5.37 µs |
+| publish, 1 handler, concurrent | 38.20 µs | tasks in a TaskGroup | 29.31 µs | +8.89 µs |
+| publish, 5 handlers, sequential | 15.46 µs | awaited in turn | 749 ns | +14.71 µs |
+| publish, 5 handlers, concurrent | 73.20 µs | tasks in a TaskGroup | 56.26 µs | +16.95 µs |
+| publish, 20 handlers, sequential | 45.44 µs | awaited in turn | 2.61 µs | +42.84 µs |
+| publish, 20 handlers, concurrent | 178.18 µs | tasks in a TaskGroup | 112.42 µs | +65.76 µs |
+| publish, 20 handlers, concurrent, limit 5 | 114.53 µs | tasks in a TaskGroup | 112.33 µs | +2.20 µs |
+| stream of 1000 items | 395.17 µs | generator iterated directly | 101.96 µs | +293.21 µs |
+| scan of 300 handlers, first | 34.03 ms | importing its modules | 25.53 ms | +8.50 ms |
+| scan of 300 handlers, already imported | 10.07 ms | | | |
 
 What the numbers say:
 
 - **`send` costs about 3 µs, plus about 1.4 µs per behavior.** That's the pipeline, whose shape is computed once per message type and then cached.
-- **`publish` costs about 2 µs per handler** on top of a fixed cost, sequentially or concurrently. `Concurrent` is dominated by the task group's own cost, which the baseline pays too.
+- **`publish` costs about 2 µs per handler** on top of a fixed cost, sequentially or concurrently. `Concurrent` is dominated by the task group's own cost, which the baseline pays too. With a `limit` of 5 it starts 5 tasks instead of 20, which makes it about as fast as that baseline.
 - **A stream adds under 0.3 µs per item.** Each item passes through the `Stream` and the layer that closes the pipeline cleanly.
 - **`scan` is a startup cost:** about 30 µs per handler beyond importing its module, once.
 

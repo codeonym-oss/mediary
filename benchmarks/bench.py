@@ -142,7 +142,7 @@ async def bench_send(settings: Settings) -> list[Result]:
 
 
 async def bench_publish(settings: Settings) -> list[Result]:
-    """Time ``publish`` to 1, 5 and 20 handlers, against running the handlers directly."""
+    """Time ``publish`` to 1, 5 and 20 handlers (and to 20, 5 at a time) against direct calls."""
     event = Tick()
     results: list[Result] = []
     for handlers in (1, 5, 20):
@@ -176,6 +176,24 @@ async def bench_publish(settings: Settings) -> list[Result]:
                 await per_operation(in_tasks, settings),
             ),
         ]
+    functions = [subscriber() for _ in range(20)]
+    limited = Mediator(publish_strategy=Concurrent(limit=5))
+    for handle in functions:
+        limited.register(Tick, handle)
+
+    async def all_in_tasks() -> None:
+        async with asyncio.TaskGroup() as group:
+            for handle in functions:
+                group.create_task(handle(event))
+
+    results.append(
+        Result(
+            "publish, 20 handlers, concurrent, limit 5",
+            await per_operation(lambda: limited.publish(event), settings),
+            "tasks in a TaskGroup",
+            await per_operation(all_in_tasks, settings),
+        )
+    )
     return results
 
 
