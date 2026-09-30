@@ -6,7 +6,7 @@ Command–query responsibility segregation splits what changes state from what r
 |---|---|---|---|---|---|
 | **Command** — change state | `@command` | `Command[R]` | `@command_handler` | exactly one | `send` |
 | **Query** — read state | `@query` | `Query[R]` | `@query_handler` | exactly one, must return a result | `send` |
-| **Event** — announce what happened | `@event` | — | `@event_handler` | any number | `publish` |
+| **Event** — announce what happened | `@event` | `Event` | `@event_handler` | any number | `publish` |
 
 It ships with mediary; nothing extra to install.
 
@@ -18,6 +18,7 @@ from dataclasses import dataclass
 
 from mediary.cqrs import (
     Command,
+    Event,
     Query,
     command,
     command_handler,
@@ -40,7 +41,7 @@ class RenameUser(Command[None]):
 
 @event
 @dataclass
-class UserRenamed:
+class UserRenamed(Event):
     user_id: int
     name: str
 
@@ -79,7 +80,7 @@ assert await mediator.send(GetUserName(1)) == "Ada"
 assert history == ["1 is now Ada"]
 ```
 
-Commands and queries are requests, and events notifications, with names of their own: everything in the guide applies to them. A class is one or the other — `@command` on a `Query` subclass raises `TypeError`, and so does `@query` on a `Command`.
+Commands and queries are requests, and events notifications, with names of their own: everything in the guide applies to them. The bases are optional, but they type the [narrow senders](#narrow-senders). A class is of one kind only: `@command` on a `Query` or `Event` subclass raises `TypeError`, and so do `@query` and `@event` on a subclass of another kind's base.
 
 ## Handlers of each kind
 
@@ -142,7 +143,7 @@ assert "must return" in reason
 
 ## Narrow senders
 
-Give each piece of code the narrowest sender it needs. `QuerySender` can only send queries, and `CommandSender` only commands; a `Mediator` is both:
+Give each piece of code the narrowest sender it needs. `QuerySender` can only send queries, `CommandSender` only commands, and `EventPublisher` only publishes events; a `Mediator` is all three:
 
 ```python
 from mediary.cqrs import QuerySender
@@ -156,7 +157,22 @@ async def profile_page(queries: QuerySender, user_id: int) -> str:
 assert await profile_page(mediator, 1) == "<h1>Ada</h1>"
 ```
 
-Senders are `Protocol`s, so a fake is a one-method class in tests. The [dishka integration](../integrations/dishka.md) provides the mediator as both.
+`EventPublisher.publish` takes only subclasses of `Event`, so code that announces what happened can't send a command:
+
+```python
+from mediary.cqrs import EventPublisher
+
+
+async def announce_rename(events: EventPublisher, user_id: int, name: str) -> None:
+    # Type checkers reject `events.publish(RenameUser(...))`: a command isn't an event.
+    await events.publish(UserRenamed(user_id, name))
+
+
+await announce_rename(mediator, 2, "Grace")
+assert history[-1] == "2 is now Grace"
+```
+
+Senders are `Protocol`s, so a fake is a one-method class in tests. The [dishka integration](../integrations/dishka.md) provides the mediator as each of them.
 
 ## Behaviors per kind
 

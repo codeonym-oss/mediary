@@ -9,7 +9,7 @@ pytest.importorskip("dishka")
 from dishka import Provider, Scope, make_async_container, make_container
 
 from mediary import Mediator, Next, Publisher, Returns, Sender, handler, notification, request
-from mediary.cqrs import CommandSender, QuerySender
+from mediary.cqrs import CommandSender, EventPublisher, QuerySender
 from mediary.ext.dishka import DishkaResolver, MediaryProvider
 from mediary.testing import RecordingMediator
 
@@ -97,7 +97,14 @@ async def test_a_scope_provides_the_mediator_as_each_of_its_types() -> None:
         assert scoped is not recording
         assert isinstance(scoped.resolver, DishkaResolver)
         assert scoped.resolver.container is scope
-        for other in (RecordingMediator, Sender, Publisher, CommandSender, QuerySender):
+        for other in (
+            RecordingMediator,
+            Sender,
+            Publisher,
+            CommandSender,
+            QuerySender,
+            EventPublisher,
+        ):
             assert await scope.get(other) is scoped
         await scoped.send(SessionOf())
     assert recording.sent_of(SessionOf) == [SessionOf()]

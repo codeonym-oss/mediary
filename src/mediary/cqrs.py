@@ -7,7 +7,8 @@ A query handler annotated to return None is rejected when it is registered or sc
 a handler they mark is rejected if its message is of another kind. ``@command_behavior``,
 ``@query_behavior`` and ``@event_behavior`` are ``@behavior(kinds={"command"})`` and its
 counterparts. ``CommandHandler``, ``QueryHandler`` and ``EventHandler`` let a handler class
-declare what it handles.
+declare what it handles. The ``Command``, ``Query`` and ``Event`` bases are optional; they type
+the narrow senders ``CommandSender``, ``QuerySender`` and ``EventPublisher``.
 
 The pack is built only on the public ``mediary.kinds`` API. Give each piece of code the
 narrowest sender it needs, so that, for instance, a read-only view can't send a command.
@@ -20,16 +21,13 @@ Example:
         class GetUser(Query[User]):
             user_id: int
 
-        async def show(users: QuerySender, user_id: int) -> User:
-            return await users.send(GetUser(user_id))
-
         @query_handler
         async def get_user(query: GetUser, users: UserRepository) -> User: ...
 
         async def show(users: QuerySender, user_id: int) -> User:
             return await users.send(GetUser(user_id))
 
-        await show(mediator, 1)  # a Mediator is both a QuerySender and a CommandSender
+        await show(mediator, 1)  # a Mediator is each of the narrow senders
 
 """
 
@@ -50,7 +48,9 @@ __all__ = [
     "Command",
     "CommandHandler",
     "CommandSender",
+    "Event",
     "EventHandler",
+    "EventPublisher",
     "Query",
     "QueryHandler",
     "QuerySender",
@@ -83,6 +83,23 @@ class Query(Returns[_R_co]):
     __slots__ = ()
 
 
+class Event:
+    """Base for events: types ``EventPublisher.publish``. It takes no type: events return nothing.
+
+    Example:
+        .. code-block:: python
+
+            @event
+            @dataclass
+            class UserRenamed(Event):
+                user_id: int
+                name: str
+
+    """
+
+    __slots__ = ()
+
+
 def _returns_a_result(info: HandlerInfo) -> str | None:
     if info.returns is type(None):
         return "a query handler must return what it read, but it is annotated to return None"
@@ -94,15 +111,26 @@ _QUERY = define_kind("query", dispatch="send", rules=[_returns_a_result])
 _EVENT = define_kind("event", dispatch="publish")
 
 
+_BASES: dict[type, str] = {Command: "command", Query: "query", Event: "event"}
+
+
+def _check_base(cls: type, own: type) -> None:
+    """Raise ``TypeError`` if ``cls`` subclasses the base of a kind other than ``own``'s."""
+    for base, name in _BASES.items():
+        if base is not own and issubclass(cls, base):
+            raise TypeError(
+                f"{cls.__qualname__} subclasses {base.__name__}, so decorate it with @{name}"
+            )
+
+
 def command(cls: _C) -> _C:
     """Mark a class as a command: a request to change state, sent to exactly one handler.
 
     Raises:
-        TypeError: ``cls`` subclasses ``Query``.
+        TypeError: ``cls`` subclasses ``Query`` or ``Event``.
 
     """
-    if issubclass(cls, Query):
-        raise TypeError(f"{cls.__qualname__} subclasses Query, so decorate it with @query")
+    _check_base(cls, Command)
     return _COMMAND(cls)
 
 
@@ -112,16 +140,21 @@ def query(cls: _C) -> _C:
     Its handler must not be annotated to return None.
 
     Raises:
-        TypeError: ``cls`` subclasses ``Command``.
+        TypeError: ``cls`` subclasses ``Command`` or ``Event``.
 
     """
-    if issubclass(cls, Command):
-        raise TypeError(f"{cls.__qualname__} subclasses Command, so decorate it with @command")
+    _check_base(cls, Query)
     return _QUERY(cls)
 
 
 def event(cls: _C) -> _C:
-    """Mark a class as an event: something that happened, published to all of its handlers."""
+    """Mark a class as an event: something that happened, published to all of its handlers.
+
+    Raises:
+        TypeError: ``cls`` subclasses ``Command`` or ``Query``.
+
+    """
+    _check_base(cls, Event)
     return _EVENT(cls)
 
 
@@ -200,4 +233,16 @@ class QuerySender(Protocol):
 
     async def send(self, query: Query[_R], /) -> _R:
         """Send ``query`` to its handler and return the result."""
+        ...
+
+
+class EventPublisher(Protocol):
+    """Something that publishes events, such as a ``Mediator``.
+
+    Only events that subclass ``Event`` type-check: a command or a query can't be published
+    through it.
+    """
+
+    async def publish(self, event: Event, /) -> None:
+        """Publish ``event`` to all of its handlers."""
         ...
