@@ -84,6 +84,19 @@ assert sent[-1] == "logs flushed"  # ran despite the other handler failing
 
 `await mediator.publish(event, strategy=Sequential())` overrides the mediator's strategy for one publish.
 
+`Concurrent(limit=5)` runs at most 5 handlers at a time, starting the next, in order, as each one finishes. Set it when every handler holds something scarce, such as a connection from a pool, so that many handlers can't exhaust it. Errors are grouped the same way, with or without a limit.
+
+```python
+mediator = Mediator(publish_strategy=Concurrent(limit=1))  # still every handler, despite errors
+mediator.register(Shutdown, close_database)
+mediator.register(Shutdown, flush_logs)
+
+try:
+    await mediator.publish(Shutdown())
+except ExceptionGroup as group:
+    assert [type(error) for error in group.exceptions] == [ConnectionError]
+```
+
 ## Your own strategy
 
 A `PublishStrategy` has one method, `publish(calls)`, which gets a `NotificationCall` for each handler: `await call()` runs the handler, `call.handler` is the handler as it was registered, and `call.notification` the notification. Here is one that logs failures and carries on:

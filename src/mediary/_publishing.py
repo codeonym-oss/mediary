@@ -58,15 +58,35 @@ class Sequential:
 
 
 class Concurrent:
-    """Run all handlers concurrently, in a task group.
+    """Run the handlers concurrently, in a task group: all at once, or at most ``limit`` at a time.
 
     Every handler runs to completion even if others fail; failures are then raised together
     as an ``ExceptionGroup``, in handler order. It runs on asyncio, or on trio and other event
     loops through AnyIO (``mediary[anyio]``).
+
+    With a ``limit``, handlers start in order as earlier ones finish: set it when each handler
+    holds something scarce, such as a connection from a pool.
+
+    Example:
+        .. code-block:: python
+
+            mediator = Mediator(publish_strategy=Concurrent(limit=5))
+
     """
+
+    def __init__(self, *, limit: int | None = None) -> None:
+        """Configure how many handlers may run at once: any number when ``limit`` is None.
+
+        Raises:
+            ValueError: ``limit`` is below 1.
+
+        """
+        if limit is not None and limit < 1:
+            raise ValueError(f"limit must be at least 1, got {limit}")
+        self.limit = limit
 
     async def publish(self, calls: Sequence[NotificationCall], /) -> None:
         """Run the handlers as tasks and wait for all of them."""
-        failures = [error for error in await run_all(calls) if error is not None]
+        failures = [error for error in await run_all(calls, self.limit) if error is not None]
         if failures:
             raise ExceptionGroup(f"{len(failures)} notification handler(s) failed", failures)

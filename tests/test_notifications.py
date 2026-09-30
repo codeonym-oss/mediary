@@ -118,6 +118,55 @@ async def test_concurrent_handlers_overlap() -> None:
         await m.publish(UserRegistered(1))
 
 
+@pytest.mark.parametrize("limit", [1, 3])
+async def test_concurrent_runs_at_most_limit_handlers_at_once(limit: int) -> None:
+    running = peak = 0
+
+    def make(name: str) -> Any:
+        async def handle(event: UserRegistered) -> None:
+            nonlocal running, peak
+            running += 1
+            peak = max(peak, running)
+            await anyio.sleep(0.01)
+            running -= 1
+
+        handle.__qualname__ = name
+        return handle
+
+    m = subscribed(*(make(f"h{n}") for n in range(8)))
+    await m.publish(UserRegistered(1), strategy=Concurrent(limit=limit))
+    assert peak == limit
+
+
+async def test_concurrent_with_a_limit_starts_handlers_in_order() -> None:
+    log: list[str] = []
+    m = subscribed(*recording(log, "a", "b", "c", "d"))
+    await m.publish(UserRegistered(1), strategy=Concurrent(limit=2))
+    assert log == ["a", "b", "c", "d"]
+
+
+async def test_concurrent_with_a_limit_runs_every_handler_and_groups_failures() -> None:
+    log: list[str] = []
+    m = subscribed(*recording(log, "a", "b", "c", "d", fail={"d", "a"}))
+    with pytest.raises(ExceptionGroup) as exc:
+        await m.publish(UserRegistered(1), strategy=Concurrent(limit=2))
+    assert sorted(log) == ["a", "b", "c", "d"]
+    assert [str(e) for e in exc.value.exceptions] == ["a", "d"]
+
+
+async def test_a_limit_above_the_handler_count_runs_them_all() -> None:
+    log: list[str] = []
+    m = subscribed(*recording(log, "a", "b"))
+    await m.publish(UserRegistered(1), strategy=Concurrent(limit=10))
+    assert sorted(log) == ["a", "b"]
+
+
+@pytest.mark.parametrize("limit", [0, -1])
+def test_a_limit_below_one_is_rejected(limit: int) -> None:
+    with pytest.raises(ValueError, match="at least 1"):
+        Concurrent(limit=limit)
+
+
 async def test_the_strategy_is_set_per_mediator_and_per_publish() -> None:
     log: list[str] = []
 
