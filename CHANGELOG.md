@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.4.1](https://github.com/codeonym-oss/mediary/compare/v0.4.0...v0.4.1) (2026-10-14)
+
+
+### Build
+
+* **deps-dev:** bump ruff from 0.16.8 to 0.16.9 in the dev-tools group ([#72](https://github.com/codeonym-oss/mediary/issues/72)) ([d8fa3d0](https://github.com/codeonym-oss/mediary/commit/d8fa3d07d46420c10a55f1b6c0413d15f42037e1))
+* **deps-dev:** bump the dev-tools group with 3 updates ([#76](https://github.com/codeonym-oss/mediary/issues/76)) ([b3e2fa7](https://github.com/codeonym-oss/mediary/commit/b3e2fa7f18ea426ed1ad1015a538e12f37b7181d))
+* **deps:** bump fastapi from 0.141.1 to 0.142.2 ([#73](https://github.com/codeonym-oss/mediary/issues/73)) ([b5f312a](https://github.com/codeonym-oss/mediary/commit/b5f312a9e3910d123475b0c9a1f72111c76616d8))
+* **deps:** bump opentelemetry-api from 1.45.0 to 1.45.1 ([#77](https://github.com/codeonym-oss/mediary/issues/77)) ([898591f](https://github.com/codeonym-oss/mediary/commit/898591fcb0454d1474286bd19604911a7fe134b2))
+
 ## [0.4.0](https://github.com/codeonym-oss/mediary/compare/v0.3.1...v0.4.0) (2026-09-30)
 
 
